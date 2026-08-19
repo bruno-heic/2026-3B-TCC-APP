@@ -1,6 +1,7 @@
-import { Text, View } from "react-native";
+import { Text, View, Image } from "react-native";
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
+
 
 export default function Index() {
   
@@ -21,9 +22,10 @@ export default function Index() {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+        backgroundColor: "#fff"
       }}
     >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
+      <Image source={require("@/assets/images/logoBr.png")} style={{ width: 170, height: 150, resizeMode: "contain" }}/>
     </View>
   );
 }
