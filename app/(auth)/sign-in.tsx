@@ -1,9 +1,193 @@
-import {View, Text} from "react-native"
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 
 export default function SignIn() {
-    return (
-        <View>
-            <Text>TELA DE SIGN IN</Text>
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const router = useRouter();
+
+  const handleLogin = () => {
+    // Login logic here
+  };
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>Login</Text>
+
+          <View style={styles.form}>
+            {/* Email */}
+            <TextInput
+              placeholder="E-mail"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+            />
+
+            {/* Password */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                placeholder="Senha"
+                placeholderTextColor="#999"
+                autoCapitalize="none"
+                secureTextEntry={!showPassword}
+                style={styles.inputPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={
+                    showPassword
+                      ? "eye-off-outline"
+                      : "eye-outline"
+                  }
+                  size={22}
+                  color="#999"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View>
+            <Pressable onPress={() => router.push("/")}>
+              <Text style={styles.forgotPassword}>
+                Esqueceu sua senha?
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.register}>
+            <Text>Não possui conta? </Text>
+
+            <Pressable onPress={() => router.push("/")}>
+              <Text style={styles.registerText}>
+                Cadastre-se
+              </Text>
+            </Pressable>
+          </View>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleLogin}
+          >
+            <Text style={styles.buttonText}>Entrar</Text>
+          </TouchableOpacity>
         </View>
-    )
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
+  );
 }
+
+const styles = StyleSheet.create({
+  keyboardContainer: {
+    flex: 1,
+  },
+
+  container: {
+    flex: 1,
+    paddingHorizontal: 25,
+    backgroundColor: "#fff",
+  },
+
+  title: {
+    marginTop: 15,
+    marginBottom: 25,
+    fontSize: 20,
+    fontFamily: "Nunito-Bold",
+    textAlign: "center",
+  },
+
+  form: {
+    width: "100%",
+    marginVertical: 10,
+  },
+
+  input: {
+    height: 45,
+    borderBottomWidth: 2,
+    borderBottomColor: "#FFD700",
+    fontSize: 16,
+    fontFamily: "Nunito",
+    color: "#000",
+    paddingHorizontal: 0,
+    paddingBottom: 8,
+    marginTop: 20,
+  },
+
+  inputContainer: {
+    height: 45,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "#FFD700",
+    marginTop: 20,
+  },
+
+  inputPassword: {
+    flex: 1,
+    height: 45,
+    fontSize: 16,
+    fontFamily: "Nunito",
+    color: "#000",
+    paddingHorizontal: 0,
+    paddingBottom: 8,
+  },
+
+  forgotPassword: {
+    color: "#3498db",
+    marginBottom: 10,
+  },
+
+  register: {
+    flexDirection: "row",
+    marginTop: 10,
+  },
+
+  registerText: {
+    color: "#3498db",
+  },
+
+  button: {
+    position: "absolute",
+    bottom: 25,
+    left: 20,
+    right: 20,
+    height: 60,
+    backgroundColor: "#2E98FE",
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  buttonText: {
+    fontFamily: "Nunito",
+    fontSize: 20,
+    color: "#fff",
+  },
+});
