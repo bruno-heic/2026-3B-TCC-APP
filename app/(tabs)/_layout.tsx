@@ -1,20 +1,102 @@
 import { Tabs } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
+
+const ACTIVE_COLOR = '#2196F3';
+const INACTIVE_COLOR = '#999999';
 
 export default function TabLayout() {
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+
+        tabBarActiveTintColor: ACTIVE_COLOR,
+        tabBarInactiveTintColor: INACTIVE_COLOR,
+
+        tabBarShowLabel: true,
+
+        tabBarStyle: {
+          position: 'absolute',
+
+          height: 100,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowColor: 'transparent',
+        },
+
+        tabBarLabelStyle: {
+          fontFamily: 'Nunito_400Regular',
+          fontSize: 12,
+          marginTop: 4,
+        },
+
+        tabBarIconStyle: {
+          marginTop: 10,
+        },
+
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="home" color={color} />,
+          title: 'Início',
+
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons
+              name="home"
+              size={30}
+              color={color}
+            />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="settings"
+        name="devices"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="cog" color={color} />,
+          title: 'Dispositivos',
+
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons
+              name="devices"
+              size={28}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="reports"
+        options={{
+          title: 'Relatórios',
+
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons
+              name="bar-chart"
+              size={32}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Perfil',
+
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons
+              name="pets"
+              size={28}
+              color={color}
+            />
+          ),
         }}
       />
     </Tabs>

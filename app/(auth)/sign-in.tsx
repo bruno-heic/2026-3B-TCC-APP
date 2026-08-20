@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -31,27 +32,33 @@ export default function SignIn() {
         style={styles.keyboardContainer}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.container}>
-          <Text style={styles.title}>Login</Text>
+        <SafeAreaView style={styles.container}>
+
+          <Text style={styles.title}>
+            Login
+          </Text>
 
           <View style={styles.form}>
-            {/* Email */}
+
+            {/* E-mail */}
             <TextInput
               placeholder="E-mail"
               placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               style={styles.input}
               value={email}
               onChangeText={setEmail}
             />
 
-            {/* Password */}
+            {/* Senha */}
             <View style={styles.inputContainer}>
               <TextInput
                 placeholder="Senha"
                 placeholderTextColor="#999"
                 autoCapitalize="none"
+                autoCorrect={false}
                 secureTextEntry={!showPassword}
                 style={styles.inputPassword}
                 value={password}
@@ -72,8 +79,10 @@ export default function SignIn() {
                 />
               </TouchableOpacity>
             </View>
+
           </View>
 
+          {/* Esqueci minha senha */}
           <View>
             <Pressable onPress={() => router.push("/")}>
               <Text style={styles.forgotPassword}>
@@ -82,8 +91,11 @@ export default function SignIn() {
             </Pressable>
           </View>
 
+          {/* Cadastro */}
           <View style={styles.register}>
-            <Text>Não possui conta? </Text>
+            <Text style={styles.registerDefaultText}>
+              Não possui conta?{" "}
+            </Text>
 
             <Pressable onPress={() => router.push("/")}>
               <Text style={styles.registerText}>
@@ -92,13 +104,17 @@ export default function SignIn() {
             </Pressable>
           </View>
 
+          {/* Botão */}
           <TouchableOpacity
             style={styles.button}
             onPress={handleLogin}
           >
-            <Text style={styles.buttonText}>Entrar</Text>
+            <Text style={styles.buttonText}>
+              Entrar
+            </Text>
           </TouchableOpacity>
-        </View>
+
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
@@ -121,6 +137,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "Nunito-Bold",
     textAlign: "center",
+    color: "#000",
   },
 
   form: {
@@ -133,7 +150,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: "#FFD700",
     fontSize: 16,
-    fontFamily: "Nunito",
+    fontFamily: "Nunito-Regular",
     color: "#000",
     paddingHorizontal: 0,
     paddingBottom: 8,
@@ -153,13 +170,15 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 45,
     fontSize: 16,
-    fontFamily: "Nunito",
+    fontFamily: "Nunito-Regular",
     color: "#000",
     paddingHorizontal: 0,
     paddingBottom: 8,
   },
 
   forgotPassword: {
+    fontFamily: "Nunito-Regular",
+    fontSize: 14,
     color: "#3498db",
     marginBottom: 10,
   },
@@ -169,7 +188,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  registerDefaultText: {
+    fontFamily: "Nunito-Regular",
+    fontSize: 14,
+    color: "#000",
+  },
+
   registerText: {
+    fontFamily: "Nunito-SemiBold",
+    fontSize: 14,
     color: "#3498db",
   },
 
@@ -186,7 +213,7 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    fontFamily: "Nunito",
+    fontFamily: "Nunito-SemiBold",
     fontSize: 20,
     color: "#fff",
   },
