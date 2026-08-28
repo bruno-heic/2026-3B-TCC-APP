@@ -5,7 +5,16 @@ export type SignUpParams = {
 };
 
 export type SignUpResult = {
-  sucesso: boolean;
+  sucess: boolean;
   idUsuario?: number;
-  erro?: string;
+  error?: string;
 };
+
+export type SignInParams = {
+  email: string;
+  password: string;
+};
+
+export type SignInResult =
+  | { sucess: true; idUsuario: number }
+  | { sucess: false; error: string };

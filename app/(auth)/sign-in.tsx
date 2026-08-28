@@ -1,7 +1,9 @@
+import { handleLoginUser } from "@/lib/actions/user-actions";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -22,7 +24,27 @@ export default function SignIn() {
 
   const router = useRouter();
 
-  const handleLogin = () => {};
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Atenção", "Preencha e-mail e senha.");
+      return;
+    }
+
+    setLoading(true);
+
+    const result = await handleLoginUser({ email, password });
+
+    setLoading(false);
+
+    if (!result.sucess) {
+      Alert.alert("Erro ao entrar", result.error);
+      return;
+    }
+    Alert.alert("Login feito com sucesso");
+    router.push("/(tabs)/home");
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -81,7 +103,10 @@ export default function SignIn() {
             </Pressable>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleLogin}
+          >
             <Text style={styles.buttonText}>Entrar</Text>
           </TouchableOpacity>
         </SafeAreaView>
@@ -186,5 +211,9 @@ const styles = StyleSheet.create({
     fontFamily: "Nunito-SemiBold",
     fontSize: 20,
     color: "#fff",
+  },
+  buttonDisabled: {
+    backgroundColor: "#A9A9A9",
+    opacity: 0.6,
   },
 });
