@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -14,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -22,9 +22,7 @@ export default function SignIn() {
 
   const router = useRouter();
 
-  const handleLogin = () => {
-    // Login logic here
-  };
+  const handleLogin = () => {};
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -33,14 +31,9 @@ export default function SignIn() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <SafeAreaView style={styles.container}>
-
-          <Text style={styles.title}>
-            Login
-          </Text>
+          <Text style={styles.title}>Login</Text>
 
           <View style={styles.form}>
-
-            {/* E-mail */}
             <TextInput
               placeholder="E-mail"
               placeholderTextColor="#999"
@@ -52,7 +45,6 @@ export default function SignIn() {
               onChangeText={setEmail}
             />
 
-            {/* Senha */}
             <View style={styles.inputContainer}>
               <TextInput
                 placeholder="Senha"
@@ -65,55 +57,33 @@ export default function SignIn() {
                 onChangeText={setPassword}
               />
 
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-              >
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                 <Ionicons
-                  name={
-                    showPassword
-                      ? "eye-off-outline"
-                      : "eye-outline"
-                  }
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={22}
                   color="#999"
                 />
               </TouchableOpacity>
             </View>
-
           </View>
 
-          {/* Esqueci minha senha */}
           <View>
             <Pressable onPress={() => router.push("/")}>
-              <Text style={styles.forgotPassword}>
-                Esqueceu sua senha?
-              </Text>
+              <Text style={styles.forgotPassword}>Esqueceu sua senha?</Text>
             </Pressable>
           </View>
 
-          {/* Cadastro */}
           <View style={styles.register}>
-            <Text style={styles.registerDefaultText}>
-              Não possui conta?{" "}
-            </Text>
+            <Text style={styles.registerDefaultText}>Não possui conta? </Text>
 
-            <Pressable onPress={() => router.push("/")}>
-              <Text style={styles.registerText}>
-                Cadastre-se
-              </Text>
+            <Pressable onPress={() => router.push("/(auth)/sign-up")}>
+              <Text style={styles.registerText}>Cadastre-se.</Text>
             </Pressable>
           </View>
 
-          {/* Botão */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-          >
-            <Text style={styles.buttonText}>
-              Entrar
-            </Text>
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <Text style={styles.buttonText}>Entrar</Text>
           </TouchableOpacity>
-
         </SafeAreaView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
