@@ -1,3 +1,4 @@
+import { SucessSignUserModal } from "@/components/sucessSignUser";
 import { handleSignUser } from "@/lib/actions/user-actions";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -17,7 +18,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 export default function SignUp() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -27,6 +27,8 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [idUserCreated, setIdUserCreated] = useState(0);
+  const [modalVisivel, setModalVisivel] = useState(false);
 
   const router = useRouter();
 
@@ -65,7 +67,6 @@ export default function SignUp() {
     setLoading(true);
 
     const result = await handleSignUser({ nome, email, password });
-    Alert.alert("Usuário cadastrado");
     setLoading(false);
 
     if (!result.sucess) {
@@ -73,141 +74,167 @@ export default function SignUp() {
       return;
     }
 
+    setIdUserCreated(result.idUsuario);
+    setModalVisivel(true);
+  };
+
+  const handleAddPet = () => {
+    setModalVisivel(false);
     router.push({
-      pathname: "/(tabs)/home",
-      params: { idUsuario: result.idUsuario },
+      pathname: "/",
+      params: { idUsuario: idUserCreated },
     });
   };
 
+  const handleDoLater = () => {
+    setModalVisivel(false);
+    router.replace("/home");
+  };
+
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <SafeAreaView style={styles.container}>
-          <ScrollView
-            contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Text style={styles.title}>Cadastro do usuário</Text>
-
-            <View style={styles.progressContainer}>
-              <View style={styles.line} />
-              <View style={styles.steps}>
-                <View style={styles.step}>
-                  <View style={[styles.circle, styles.active]} />
-                  <Text style={styles.stepText}>Etapa 1</Text>
-                </View>
-                <View style={styles.step}>
-                  <View style={styles.circle} />
-                  <Text style={styles.stepText}>Etapa 2</Text>
-                </View>
-                <View style={styles.step}>
-                  <View style={styles.circle} />
-                  <Text style={styles.stepText}>Etapa 3</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.form}>
-              <TextInput
-                placeholder="Nome completo"
-                placeholderTextColor="#999"
-                autoCapitalize="words"
-                autoCorrect={false}
-                style={styles.input}
-                value={nome}
-                onChangeText={setNome}
-              />
-
-              <TextInput
-                placeholder="E-mail"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-              />
-
-              <TextInput
-                placeholder="Confirmar e-mail"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.input}
-                value={confirmarEmail}
-                onChangeText={setConfirmarEmail}
-              />
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  placeholder="Senha"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry={!showPassword}
-                  style={styles.inputPassword}
-                  value={password}
-                  onChangeText={setPassword}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={22}
-                    color="#999"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  placeholder="Confirmar senha"
-                  placeholderTextColor="#999"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry={!showConfirmPassword}
-                  style={styles.inputPassword}
-                  value={confirmarSenha}
-                  onChangeText={setConfirmarSenha}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Ionicons
-                    name={
-                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
-                    }
-                    size={22}
-                    color="#999"
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.register}>
-              <Text style={styles.registerDefaultText}>Já possui conta? </Text>
-              <Pressable onPress={() => router.push("/sign-in")}>
-                <Text style={styles.registerText}>Faça login</Text>
-              </Pressable>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={SignUpUser}
-              disabled={loading}
+    <>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          style={styles.keyboardContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <SafeAreaView style={styles.container}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.buttonText}>Cadastrar</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </SafeAreaView>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+              <Text style={styles.title}>Cadastro do usuário</Text>
+
+              <View style={styles.progressContainer}>
+                <View style={styles.line} />
+                <View style={styles.steps}>
+                  <View style={styles.step}>
+                    <View style={[styles.circle, styles.active]} />
+                    <Text style={styles.stepText}>Etapa 1</Text>
+                  </View>
+                  <View style={styles.step}>
+                    <View style={styles.circle} />
+                    <Text style={styles.stepText}>Etapa 2</Text>
+                  </View>
+                  <View style={styles.step}>
+                    <View style={styles.circle} />
+                    <Text style={styles.stepText}>Etapa 3</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.form}>
+                <TextInput
+                  placeholder="Nome completo"
+                  placeholderTextColor="#999"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  style={styles.input}
+                  value={nome}
+                  onChangeText={setNome}
+                />
+
+                <TextInput
+                  placeholder="E-mail"
+                  placeholderTextColor="#999"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                />
+
+                <TextInput
+                  placeholder="Confirmar e-mail"
+                  placeholderTextColor="#999"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                  value={confirmarEmail}
+                  onChangeText={setConfirmarEmail}
+                />
+
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    placeholder="Senha"
+                    placeholderTextColor="#999"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    secureTextEntry={!showPassword}
+                    style={styles.inputPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    textContentType="oneTimeCode"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={22}
+                      color="#999"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    placeholder="Confirmar senha"
+                    placeholderTextColor="#999"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    secureTextEntry={!showConfirmPassword}
+                    style={styles.inputPassword}
+                    value={confirmarSenha}
+                    onChangeText={setConfirmarSenha}
+                    autoComplete="off"
+                    importantForAutofill="no"
+                    textContentType="oneTimeCode"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Ionicons
+                      name={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={22}
+                      color="#999"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.register}>
+                <Text style={styles.registerDefaultText}>
+                  Já possui conta?{" "}
+                </Text>
+                <Pressable onPress={() => router.push("/sign-in")}>
+                  <Text style={styles.registerText}>Faça login</Text>
+                </Pressable>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={SignUpUser}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>Cadastrar</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+      <SucessSignUserModal
+        visible={modalVisivel}
+        onAddPet={handleAddPet}
+        onDoLater={handleDoLater}
+      />
+    </>
   );
 }
 
@@ -292,7 +319,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Nunito-Regular",
     color: "#000",
-    backgroundColor: "#fff",
     paddingHorizontal: 0,
     paddingBottom: 8,
   },
