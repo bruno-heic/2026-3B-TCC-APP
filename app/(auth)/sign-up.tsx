@@ -29,6 +29,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [idUserCreated, setIdUserCreated] = useState(0);
   const [modalVisivel, setModalVisivel] = useState(false);
+  const [addPetModalVisible, setAddPetModalVisible] = useState(false);
 
   const router = useRouter();
 
@@ -81,7 +82,7 @@ export default function SignUp() {
   const handleAddPet = () => {
     setModalVisivel(false);
     router.push({
-      pathname: "/",
+      pathname: "/sign-up-pet",
       params: { idUsuario: idUserCreated },
     });
   };
@@ -213,8 +214,8 @@ export default function SignUp() {
                 <Text style={styles.registerDefaultText}>
                   Já possui conta?{" "}
                 </Text>
-                <Pressable onPress={() => router.push("/sign-in")}>
-                  <Text style={styles.registerText}>Faça login</Text>
+                <Pressable onPress={() => router.replace("/sign-in")}>
+                  <Text style={styles.registerText}>Faça login.</Text>
                 </Pressable>
               </View>
 

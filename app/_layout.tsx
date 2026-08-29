@@ -1,6 +1,8 @@
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
+import { Session } from "@supabase/supabase-js";
 import { useFonts } from "expo-font";
+import { Slot, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 
 import {
@@ -14,6 +16,7 @@ import {
   Nunito_900Black,
 } from "@expo-google-fonts/nunito";
 
+import { supabase } from "@/lib/supabase";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -27,18 +30,47 @@ export default function RootLayout() {
     "Nunito-Black": Nunito_900Black,
   });
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  const [session, setSession] = useState<Session | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Carrega a sessão inicial e escuta mudanças (login/logout)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setSessionLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      },
+    );
+
+    return () => authListener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+    const currentRoute = segments[segments.length - 1];
+    const isSelfManagedRoute =
+      currentRoute === "sign-up" || currentRoute === "sign-up-pet";
+
+    if (session && inAuthGroup && !isSelfManagedRoute) {
+      router.replace("/(tabs)/home");
+    } else if (!session && !inAuthGroup) {
+      router.replace("/(auth)/sign-in");
+    }
+  }, [session, segments, sessionLoading]);
 
   return (
     <>
       <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
+      <Slot />
     </>
   );
 }

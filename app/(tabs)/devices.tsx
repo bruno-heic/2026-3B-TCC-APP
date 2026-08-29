@@ -1,9 +1,14 @@
-import { View, Text } from "react-native"
+import { RequirePetsGate } from "@/components/RequirePetGate";
+import { Alert, View } from "react-native";
 
 export default function Devices() {
-    return (
-        <View>
-            <Text>DEVICES</Text>
-        </View>
-    )
+  return (
+    <RequirePetsGate
+      onAddPet={() => {
+        Alert.alert("funciounou");
+      }}
+    >
+      <View></View>
+    </RequirePetsGate>
+  );
 }

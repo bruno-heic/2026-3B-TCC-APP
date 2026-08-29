@@ -91,3 +91,15 @@ export async function handleLoginUser({
     };
   }
 }
+
+export async function handleLogout() {
+  try {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Erro ao sair:", error.message);
+    }
+  } catch (err) {
+    console.error("Erro inesperado ao sair:", err);
+  }
+}

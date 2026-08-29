@@ -43,7 +43,7 @@ export default function SignIn() {
       return;
     }
     Alert.alert("Login feito com sucesso");
-    router.push("/(tabs)/home");
+    router.replace("/(tabs)/home");
   };
 
   return (
@@ -98,7 +98,7 @@ export default function SignIn() {
           <View style={styles.register}>
             <Text style={styles.registerDefaultText}>Não possui conta? </Text>
 
-            <Pressable onPress={() => router.push("/(auth)/sign-up")}>
+            <Pressable onPress={() => router.replace("/(auth)/sign-up")}>
               <Text style={styles.registerText}>Cadastre-se.</Text>
             </Pressable>
           </View>
