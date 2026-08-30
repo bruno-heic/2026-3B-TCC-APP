@@ -57,8 +57,12 @@ export default function RootLayout() {
 
     const inAuthGroup = segments[0] === "(auth)";
     const currentRoute = segments[segments.length - 1];
-    const isSelfManagedRoute =
-      currentRoute === "sign-up" || currentRoute === "sign-up-pet";
+    const isSelfManagedRoute = [
+      "sign-up",
+      "sign-up-pet",
+      "verify-code",
+      "new-password",
+    ].includes(currentRoute as string);
 
     if (session && inAuthGroup && !isSelfManagedRoute) {
       router.replace("/(tabs)/home");

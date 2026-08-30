@@ -6,9 +6,11 @@ import { handleLogout } from "@/lib/actions/user-actions";
 import { Pet, PetFormData } from "@/lib/types/types";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -78,6 +80,10 @@ export default function Home() {
             <ScrollView contentContainerStyle={{ padding: 20 }}>
               {pets.map((pet) => (
                 <View key={pet.id_pet} style={{ marginBottom: 20 }}>
+                  <Image
+                    source={{ uri: pet.foto_url }}
+                    style={{ width: 100, height: 100, borderRadius: 50 }}
+                  />
                   <Text>Nome: {pet.nome}</Text>
                   <Text>Espécie: {pet.especie}</Text>
                   <Text>Raça: {pet.raca}</Text>

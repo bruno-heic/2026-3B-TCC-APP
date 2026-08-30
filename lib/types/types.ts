@@ -62,3 +62,15 @@ export type Pet = {
 export type GetPetsResult =
   | { sucess: true; pets: Pet[] }
   | { sucess: false; error: string };
+
+export type ResetPasswordResult =
+  | { sucess: true }
+  | { sucess: false; error: string };
+
+export type VerifyCodeResult =
+  | { sucess: true }
+  | { sucess: false; error: string };
+
+export type UpdatePasswordResult =
+  | { sucess: true }
+  | { sucess: false; error: string };

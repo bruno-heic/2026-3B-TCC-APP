@@ -1,10 +1,13 @@
 import { supabase } from "@/lib/supabase";
 import {
+  ResetPasswordResult,
   SignInParams,
   SignInResult,
   SignUpParams,
   SignUpResult,
-} from "../types/types";
+  UpdatePasswordResult,
+  VerifyCodeResult,
+} from "@/lib/types/types";
 
 export async function handleSignUser({
   nome,
@@ -101,5 +104,72 @@ export async function handleLogout() {
     }
   } catch (err) {
     console.error("Erro inesperado ao sair:", err);
+  }
+}
+
+export async function handleResetPassword(
+  email: string,
+): Promise<ResetPasswordResult> {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao solicitar recuperação:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export async function handleVerifyResetCode(
+  email: string,
+  codigo: string,
+): Promise<VerifyCodeResult> {
+  try {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: codigo,
+      type: "recovery",
+    });
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao verificar código:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export async function handleUpdatePassword(
+  novaSenha: string,
+): Promise<UpdatePasswordResult> {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: novaSenha,
+    });
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao atualizar senha:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
   }
 }

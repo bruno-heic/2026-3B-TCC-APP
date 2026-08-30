@@ -90,7 +90,7 @@ export default function SignIn() {
           </View>
 
           <View>
-            <Pressable onPress={() => router.push("/")}>
+            <Pressable onPress={() => router.push("/forgot-password")}>
               <Text style={styles.forgotPassword}>Esqueceu sua senha?</Text>
             </Pressable>
           </View>
