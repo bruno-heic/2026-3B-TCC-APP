@@ -2,7 +2,7 @@ import { PetsProvider } from "@/contexts/PetsContext";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
-const ACTIVE_COLOR = "#2196F3";
+const ACTIVE_COLOR = "#2E98FE";
 const INACTIVE_COLOR = "#999999";
 
 export default function TabLayout() {
@@ -29,7 +29,7 @@ export default function TabLayout() {
 
           tabBarLabelStyle: {
             fontFamily: "Nunito_400Regular",
-            fontSize: 12,
+            fontSize: 10,
             marginTop: 4,
           },
 
@@ -48,7 +48,7 @@ export default function TabLayout() {
             title: "Início",
 
             tabBarIcon: ({ color }) => (
-              <MaterialIcons name="home" size={30} color={color} />
+              <MaterialIcons name="home" size={28} color={color} />
             ),
           }}
         />
@@ -70,7 +70,7 @@ export default function TabLayout() {
             title: "Relatórios",
 
             tabBarIcon: ({ color }) => (
-              <MaterialIcons name="bar-chart" size={32} color={color} />
+              <MaterialIcons name="bar-chart" size={28} color={color} />
             ),
           }}
         />

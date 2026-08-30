@@ -7,6 +7,7 @@ import {
 import { decode } from "base64-arraybuffer";
 import { File } from "expo-file-system";
 import { VerifyPetsResult } from "../types/types";
+
 export async function checkUserPets(
   idUsuario: number,
 ): Promise<VerifyPetsResult> {
@@ -65,7 +66,7 @@ export async function uploadPetImage(
   }
 }
 
-function formatarDataParaSupabase(data: string): string | null {
+export function formatarDataParaSupabase(data: string): string | null {
   const partes = data.split("/");
 
   if (partes.length !== 3) {
@@ -160,6 +161,35 @@ export async function getUserPets(idUsuario: number): Promise<GetPetsResult> {
     return {
       sucess: false,
       error: "Ocorreu um erro inesperado ao buscar os pets.",
+    };
+  }
+}
+
+export type UpdatePetResult =
+  | { sucess: true }
+  | { sucess: false; error: string };
+
+export async function updatePetField(
+  idPet: number,
+  campo: string,
+  valor: string | number,
+): Promise<UpdatePetResult> {
+  try {
+    const { error } = await supabase
+      .from("pet")
+      .update({ [campo]: valor })
+      .eq("id_pet", idPet);
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao atualizar pet:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
     };
   }
 }
