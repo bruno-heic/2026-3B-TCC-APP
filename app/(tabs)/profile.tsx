@@ -1,14 +1,3 @@
-import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-
 import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   EditableField,
@@ -23,15 +12,41 @@ import {
   handleDeletePet,
   updatePetField,
 } from "@/lib/actions/pet-actions";
-import { handleDeleteAccount, handleLogout } from "@/lib/actions/user-actions";
+import {
+  getUser,
+  handleDeleteAccount,
+  handleLogout,
+  updateUserField,
+} from "@/lib/actions/user-actions";
 import { Pet } from "@/lib/types/types";
 import * as ImagePicker from "expo-image-picker";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
 type ConfirmAction = "logout" | "delete-account" | "delete-pet" | null;
+
+type Usuario = {
+  id_usuario: number;
+  user_id: string;
+  nome: string;
+  email: string;
+};
 
 export default function Perfil() {
   const { userId, reload } = usePetsContext();
+
   const [pets, setPets] = useState<Pet[]>([]);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -40,7 +55,15 @@ export default function Perfil() {
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
 
-  const router = useRouter();
+  const carregarUsuario = useCallback(async () => {
+    const resultado = await getUser();
+
+    if (resultado.sucess) {
+      setUsuario(resultado.user);
+    } else {
+      Alert.alert("Erro", resultado.error);
+    }
+  }, []);
 
   const carregarPets = useCallback(
     async (isInitial = false) => {
@@ -56,13 +79,18 @@ export default function Perfil() {
 
       if (resultado.sucess) {
         setPets(resultado.pets);
+
         setSelectedPet((atual) => {
           if (atual) {
             const aindaExiste = resultado.pets.find(
               (p) => p.id_pet === atual.id_pet,
             );
-            if (aindaExiste) return aindaExiste;
+
+            if (aindaExiste) {
+              return aindaExiste;
+            }
           }
+
           return resultado.pets[0] ?? null;
         });
       }
@@ -78,11 +106,17 @@ export default function Perfil() {
 
   useFocusEffect(
     useCallback(() => {
+      carregarUsuario();
       carregarPets(true);
-    }, [carregarPets]),
+    }, [carregarUsuario, carregarPets]),
   );
 
   const handleEditPetInfo = (field: EditableField) => {
+    setEditingField(field);
+    setEditModalVisible(true);
+  };
+
+  const handleEditUserInfo = (field: EditableField) => {
     setEditingField(field);
     setEditModalVisible(true);
   };
@@ -91,7 +125,22 @@ export default function Perfil() {
     field: EditableField,
     novoValor: string,
   ): Promise<boolean> => {
-    if (!selectedPet) return false;
+    if (field === "nome_usuario" || field === "email" || field === "senha") {
+      const resultado = await updateUserField(field, novoValor);
+
+      if (!resultado.sucess) {
+        Alert.alert("Erro ao salvar", resultado.error);
+        return false;
+      }
+
+      await carregarUsuario();
+
+      return true;
+    }
+
+    if (!selectedPet) {
+      return false;
+    }
 
     const valorParaSalvar: string | number =
       field === "peso" ? parseFloat(novoValor.replace(",", ".")) : novoValor;
@@ -108,12 +157,33 @@ export default function Perfil() {
     }
 
     await carregarPets();
+
     return true;
   };
 
   const getEditingValue = (): string => {
-    if (!selectedPet || !editingField) return "";
+    if (!editingField) {
+      return "";
+    }
+
+    if (editingField === "nome_usuario") {
+      return usuario?.nome ?? "";
+    }
+
+    if (editingField === "email") {
+      return usuario?.email ?? "";
+    }
+
+    if (editingField === "senha") {
+      return "";
+    }
+
+    if (!selectedPet) {
+      return "";
+    }
+
     const valor = selectedPet[editingField];
+
     return valor !== null && valor !== undefined ? String(valor) : "";
   };
 
@@ -131,6 +201,7 @@ export default function Perfil() {
         return;
       }
     }
+
     if (confirmAction === "delete-pet") {
       if (!selectedPet) {
         setConfirmAction(null);
@@ -150,6 +221,7 @@ export default function Perfil() {
 
       await Promise.all([carregarPets(), reload()]);
     }
+
     setConfirmAction(null);
   };
 
@@ -159,12 +231,14 @@ export default function Perfil() {
       message: "Você precisará entrar novamente para acessar o app.",
       confirmLabel: "Sair",
     },
+
     "delete-account": {
       title: "Excluir conta",
       message:
         "Essa ação é permanente. Todos os seus dados e pets cadastrados serão apagados e não poderão ser recuperados.",
       confirmLabel: "Excluir conta",
     },
+
     "delete-pet": {
       title: "Excluir pet",
       message: selectedPet
@@ -174,16 +248,10 @@ export default function Perfil() {
     },
   } as const;
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2E98FE" />
-      </View>
-    );
-  }
-
   const handleEditPhoto = async () => {
-    if (!selectedPet) return;
+    if (!selectedPet) {
+      return;
+    }
 
     const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -202,7 +270,9 @@ export default function Perfil() {
       quality: 0.7,
     });
 
-    if (resultado.canceled) return;
+    if (resultado.canceled) {
+      return;
+    }
 
     const novaImagemUri = resultado.assets[0].uri;
 
@@ -219,6 +289,14 @@ export default function Perfil() {
 
     await carregarPets();
   };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#2E98FE" />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -284,7 +362,24 @@ export default function Perfil() {
         <ProfileSection
           title="Conta"
           options={[
-            { icon: "person-outline", label: "Perfil", onPress: () => {} },
+            {
+              icon: "person-outline",
+              label: "Nome",
+              value: usuario?.nome ?? "Carregando...",
+              onPress: () => handleEditUserInfo("nome_usuario"),
+            },
+            {
+              icon: "mail-outline",
+              label: "Email",
+              value: usuario?.email ?? "Carregando...",
+              onPress: () => handleEditUserInfo("email"),
+            },
+            {
+              icon: "lock-closed-outline",
+              label: "Senha",
+              value: "••••••••",
+              onPress: () => handleEditUserInfo("senha"),
+            },
             {
               icon: "hardware-chip-outline",
               label: "Gerenciar dispositivos",
@@ -342,7 +437,10 @@ export default function Perfil() {
         visible={editModalVisible}
         field={editingField}
         currentValue={getEditingValue()}
-        onClose={() => setEditModalVisible(false)}
+        onClose={() => {
+          setEditModalVisible(false);
+          setEditingField(null);
+        }}
         onSave={handleSaveField}
       />
 

@@ -78,3 +78,22 @@ export type UpdatePasswordResult =
 export type DeleteAccountResult =
   | { sucess: true }
   | { sucess: false; error: string };
+
+export type ChangeEmailResult =
+  | { sucess: true }
+  | { sucess: false; error: string };
+
+export type GetUserResult =
+  | {
+      sucess: true;
+      user: {
+        id_usuario: number;
+        user_id: string;
+        nome: string;
+        email: string;
+      };
+    }
+  | {
+      sucess: false;
+      error: string;
+    };

@@ -16,7 +16,10 @@ export type EditableField =
   | "especie"
   | "raca"
   | "data_nascimento"
-  | "peso";
+  | "peso"
+  | "nome_usuario"
+  | "email"
+  | "senha";
 
 type EditPetFieldModalProps = {
   visible: boolean;
@@ -32,6 +35,9 @@ const FIELD_LABELS: Record<EditableField, string> = {
   raca: "Raça",
   data_nascimento: "Data de nascimento",
   peso: "Peso",
+  nome_usuario: "Nome",
+  email: "Email",
+  senha: "Senha",
 };
 
 export function EditPetFieldModal({
@@ -44,7 +50,6 @@ export function EditPetFieldModal({
   const [valor, setValor] = useState(currentValue);
   const [loading, setLoading] = useState(false);
 
-  // sempre que abrir o modal com um campo/valor novo, reseta o input
   useEffect(() => {
     setValor(currentValue);
   }, [currentValue, field, visible]);
@@ -53,7 +58,6 @@ export function EditPetFieldModal({
 
   const handleChangeTexto = (texto: string) => {
     if (field === "peso") {
-      // só números e vírgula/ponto
       setValor(texto.replace(/[^0-9.,]/g, ""));
       return;
     }
@@ -64,6 +68,7 @@ export function EditPetFieldModal({
         .replace(/(\d{2})(\d)/, "$1/$2")
         .replace(/(\d{2})\/(\d{2})(\d)/, "$1/$2/$3")
         .replace(/(\d{2})\/(\d{2})\/(\d{4}).*/, "$1/$2/$3");
+
       setValor(formatado);
       return;
     }
@@ -78,7 +83,9 @@ export function EditPetFieldModal({
     }
 
     setLoading(true);
+
     const sucesso = await onSave(field, valor.trim());
+
     setLoading(false);
 
     if (sucesso) {
@@ -87,6 +94,10 @@ export function EditPetFieldModal({
   };
 
   const isEspecie = field === "especie";
+  const isSenha = field === "senha";
+  const isEmail = field === "email";
+  const isDataNascimento = field === "data_nascimento";
+  const isPeso = field === "peso";
 
   return (
     <Modal
@@ -147,16 +158,25 @@ export function EditPetFieldModal({
               onChangeText={handleChangeTexto}
               editable={!loading}
               autoFocus
+              secureTextEntry={isSenha}
               keyboardType={
-                field === "peso"
-                  ? "numeric"
-                  : field === "data_nascimento"
-                    ? "number-pad"
-                    : "default"
+                isEmail
+                  ? "email-address"
+                  : isPeso
+                    ? "numeric"
+                    : isDataNascimento
+                      ? "number-pad"
+                      : "default"
               }
-              maxLength={field === "data_nascimento" ? 10 : undefined}
+              autoCapitalize={isEmail ? "none" : isSenha ? "none" : "sentences"}
+              autoCorrect={!isEmail && !isSenha}
+              maxLength={isDataNascimento ? 10 : undefined}
               placeholder={
-                field === "data_nascimento" ? "DD/MM/AAAA" : undefined
+                isDataNascimento
+                  ? "DD/MM/AAAA"
+                  : isSenha
+                    ? "Digite sua nova senha"
+                    : undefined
               }
               placeholderTextColor="#999"
             />

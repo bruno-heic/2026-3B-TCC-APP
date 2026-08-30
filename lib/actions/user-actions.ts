@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import {
+  ChangeEmailResult,
   DeleteAccountResult,
   ResetPasswordResult,
   SignInParams,
@@ -10,6 +11,62 @@ import {
   VerifyCodeResult,
 } from "@/lib/types/types";
 
+import { GetUserResult } from "@/lib/types/types";
+
+export async function getUser(): Promise<GetUserResult> {
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      return {
+        sucess: false,
+        error: authError.message,
+      };
+    }
+
+    if (!user) {
+      return {
+        sucess: false,
+        error: "Usuário não autenticado.",
+      };
+    }
+
+    const { data: perfil, error: perfilError } = await supabase
+      .from("usuario")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    if (perfilError) {
+      return {
+        sucess: false,
+        error: perfilError.message,
+      };
+    }
+
+    if (!perfil) {
+      return {
+        sucess: false,
+        error: "Perfil do usuário não encontrado.",
+      };
+    }
+
+    return {
+      sucess: true,
+      user: perfil,
+    };
+  } catch (err) {
+    console.error("Erro inesperado ao buscar usuário:", err);
+
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
 export async function handleSignUser({
   nome,
   email,
@@ -192,6 +249,123 @@ export async function handleDeleteAccount(): Promise<DeleteAccountResult> {
     return { sucess: true };
   } catch (err) {
     console.error("Erro inesperado ao excluir conta:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export type UpdateNomeResult =
+  | { sucess: true }
+  | { sucess: false; error: string };
+
+export async function handleUpdateNome(
+  novoNome: string,
+): Promise<UpdateNomeResult> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { sucess: false, error: "Usuário não autenticado." };
+    }
+
+    const { error } = await supabase
+      .from("usuario")
+      .update({ nome: novoNome })
+      .eq("user_id", user.id);
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao atualizar nome:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export async function handleChangeEmail(
+  novoEmail: string,
+): Promise<ChangeEmailResult> {
+  try {
+    const { error } = await supabase.auth.updateUser({ email: novoEmail });
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao trocar e-mail:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export async function handleChangePasswordWithConfirm(
+  email: string,
+  senhaAtual: string,
+  novaSenha: string,
+): Promise<UpdatePasswordResult> {
+  try {
+    const { error: erroLogin } = await supabase.auth.signInWithPassword({
+      email,
+      password: senhaAtual,
+    });
+
+    if (erroLogin) {
+      return { sucess: false, error: "Senha atual incorreta." };
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao trocar senha:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export type UpdateUserFieldResult =
+  | { sucess: true }
+  | { sucess: false; error: string };
+
+export async function updateUserField(
+  field: "nome_usuario" | "email" | "senha",
+  novoValor: string,
+): Promise<UpdateUserFieldResult> {
+  try {
+    if (!novoValor.trim()) {
+      return { sucess: false, error: "O valor não pode ficar vazio." };
+    }
+    if (field === "nome_usuario") {
+      return await handleUpdateNome(novoValor);
+    }
+    if (field === "email") {
+      return await handleChangeEmail(novoValor);
+    }
+    if (field === "senha") {
+      return await handleUpdatePassword(novoValor);
+    }
+    return { sucess: false, error: "Campo inválido." };
+  } catch (err) {
+    console.error("Erro inesperado ao atualizar usuário:", err);
     return {
       sucess: false,
       error: "Ocorreu um erro inesperado. Tente novamente.",

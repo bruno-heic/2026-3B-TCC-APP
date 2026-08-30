@@ -8,6 +8,7 @@ import { decode } from "base64-arraybuffer";
 import { File } from "expo-file-system";
 import { VerifyPetsResult } from "../types/types";
 import { extrairCaminhoDoStorage } from "../utils/storage-utils";
+
 export async function checkUserPets(
   idUsuario: number,
 ): Promise<VerifyPetsResult> {
@@ -244,14 +245,12 @@ export async function handleChangePetPhoto(
   novaImagemUri: string,
 ): Promise<ChangePetPhotoResult> {
   try {
-    // 1. Sobe a nova foto pro Storage
     const resultadoUpload = await uploadPetImage(novaImagemUri);
 
     if (!resultadoUpload.sucess) {
       return { sucess: false, error: resultadoUpload.error };
     }
 
-    // 2. Atualiza a tabela pet com a nova URL
     const { error } = await supabase
       .from("pet")
       .update({ foto_url: resultadoUpload.url })
@@ -260,8 +259,6 @@ export async function handleChangePetPhoto(
     if (error) {
       return { sucess: false, error: error.message };
     }
-
-    // 3. Apaga a foto antiga do Storage (best effort, não bloqueia o resto)
     if (fotoUrlAntiga) {
       const caminho = extrairCaminhoDoStorage(fotoUrlAntiga, "pets");
 
