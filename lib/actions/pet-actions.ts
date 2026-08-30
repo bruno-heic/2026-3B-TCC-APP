@@ -7,7 +7,7 @@ import {
 import { decode } from "base64-arraybuffer";
 import { File } from "expo-file-system";
 import { VerifyPetsResult } from "../types/types";
-
+import { extrairCaminhoDoStorage } from "../utils/storage-utils";
 export async function checkUserPets(
   idUsuario: number,
 ): Promise<VerifyPetsResult> {
@@ -187,6 +187,101 @@ export async function updatePetField(
     return { sucess: true };
   } catch (err) {
     console.error("Erro inesperado ao atualizar pet:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export type DeletePetResult =
+  | { sucess: true }
+  | { sucess: false; error: string };
+
+export async function handleDeletePet(
+  idPet: number,
+  fotoUrl?: string | null,
+): Promise<DeletePetResult> {
+  try {
+    if (fotoUrl) {
+      const caminho = extrairCaminhoDoStorage(fotoUrl, "pets");
+
+      if (caminho) {
+        const { error: storageError } = await supabase.storage
+          .from("pets")
+          .remove([caminho]);
+        if (storageError) {
+          console.error(
+            "Erro ao apagar foto do Storage:",
+            storageError.message,
+          );
+        }
+      }
+    }
+    const { error } = await supabase.from("pet").delete().eq("id_pet", idPet);
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao excluir pet:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export type ChangePetPhotoResult =
+  | { sucess: true; novaUrl: string }
+  | { sucess: false; error: string };
+
+export async function handleChangePetPhoto(
+  idPet: number,
+  fotoUrlAntiga: string | null,
+  novaImagemUri: string,
+): Promise<ChangePetPhotoResult> {
+  try {
+    // 1. Sobe a nova foto pro Storage
+    const resultadoUpload = await uploadPetImage(novaImagemUri);
+
+    if (!resultadoUpload.sucess) {
+      return { sucess: false, error: resultadoUpload.error };
+    }
+
+    // 2. Atualiza a tabela pet com a nova URL
+    const { error } = await supabase
+      .from("pet")
+      .update({ foto_url: resultadoUpload.url })
+      .eq("id_pet", idPet);
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    // 3. Apaga a foto antiga do Storage (best effort, não bloqueia o resto)
+    if (fotoUrlAntiga) {
+      const caminho = extrairCaminhoDoStorage(fotoUrlAntiga, "pets");
+
+      if (caminho) {
+        const { error: storageError } = await supabase.storage
+          .from("pets")
+          .remove([caminho]);
+
+        if (storageError) {
+          console.error(
+            "Erro ao apagar foto antiga do Storage:",
+            storageError.message,
+          );
+        }
+      }
+    }
+
+    return { sucess: true, novaUrl: resultadoUpload.url };
+  } catch (err) {
+    console.error("Erro inesperado ao trocar foto do pet:", err);
     return {
       sucess: false,
       error: "Ocorreu um erro inesperado. Tente novamente.",

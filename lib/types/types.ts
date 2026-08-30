@@ -74,3 +74,7 @@ export type VerifyCodeResult =
 export type UpdatePasswordResult =
   | { sucess: true }
   | { sucess: false; error: string };
+
+export type DeleteAccountResult =
+  | { sucess: true }
+  | { sucess: false; error: string };

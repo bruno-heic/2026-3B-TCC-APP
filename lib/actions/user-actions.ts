@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import {
+  DeleteAccountResult,
   ResetPasswordResult,
   SignInParams,
   SignInResult,
@@ -167,6 +168,30 @@ export async function handleUpdatePassword(
     return { sucess: true };
   } catch (err) {
     console.error("Erro inesperado ao atualizar senha:", err);
+    return {
+      sucess: false,
+      error: "Ocorreu um erro inesperado. Tente novamente.",
+    };
+  }
+}
+
+export async function handleDeleteAccount(): Promise<DeleteAccountResult> {
+  try {
+    const { data, error } = await supabase.functions.invoke("delete-account");
+
+    if (error) {
+      return { sucess: false, error: error.message };
+    }
+
+    if (data?.error) {
+      return { sucess: false, error: data.error };
+    }
+
+    await supabase.auth.signOut();
+
+    return { sucess: true };
+  } catch (err) {
+    console.error("Erro inesperado ao excluir conta:", err);
     return {
       sucess: false,
       error: "Ocorreu um erro inesperado. Tente novamente.",

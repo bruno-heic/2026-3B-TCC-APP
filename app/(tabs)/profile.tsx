@@ -1,18 +1,4 @@
-import {
-  EditableField,
-  EditPetFieldModal,
-} from "@/components/EditPetFieldModal";
-import { PetSwitcher } from "@/components/PetSwitcher";
-import { ProfileSection } from "@/components/ProfileOptions";
-import { usePetsContext } from "@/contexts/PetsContext";
-import {
-  formatarDataParaSupabase,
-  getUserPets,
-  updatePetField,
-} from "@/lib/actions/pet-actions";
-import { handleLogout } from "@/lib/actions/user-actions";
-import { Pet } from "@/lib/types/types";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,41 +9,76 @@ import {
   View,
 } from "react-native";
 
+import { ConfirmModal } from "@/components/ConfirmModal";
+import {
+  EditableField,
+  EditPetFieldModal,
+} from "@/components/EditPetFieldModal";
+import { PetSwitcher } from "@/components/PetSwitcher";
+import { ProfileSection } from "@/components/ProfileOptions";
+import { usePetsContext } from "@/contexts/PetsContext";
+import {
+  getUserPets,
+  handleChangePetPhoto,
+  handleDeletePet,
+  updatePetField,
+} from "@/lib/actions/pet-actions";
+import { handleDeleteAccount, handleLogout } from "@/lib/actions/user-actions";
+import { Pet } from "@/lib/types/types";
+import * as ImagePicker from "expo-image-picker";
+type ConfirmAction = "logout" | "delete-account" | "delete-pet" | null;
+
 export default function Perfil() {
-  const { userId } = usePetsContext();
+  const { userId, reload } = usePetsContext();
   const [pets, setPets] = useState<Pet[]>([]);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // controle do modal de edição
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingField, setEditingField] = useState<EditableField | null>(null);
 
-  const carregarPets = useCallback(async () => {
-    if (!userId) return;
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
 
-    setLoading(true);
-    const resultado = await getUserPets(userId);
+  const router = useRouter();
 
-    if (resultado.sucess) {
-      setPets(resultado.pets);
-      setSelectedPet((atual) => {
-        if (atual) {
-          const aindaExiste = resultado.pets.find(
-            (p) => p.id_pet === atual.id_pet,
-          );
-          if (aindaExiste) return aindaExiste;
-        }
-        return resultado.pets[0] ?? null;
-      });
-    }
+  const carregarPets = useCallback(
+    async (isInitial = false) => {
+      if (!userId) return;
 
-    setLoading(false);
-  }, [userId]);
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      const resultado = await getUserPets(userId);
+
+      if (resultado.sucess) {
+        setPets(resultado.pets);
+        setSelectedPet((atual) => {
+          if (atual) {
+            const aindaExiste = resultado.pets.find(
+              (p) => p.id_pet === atual.id_pet,
+            );
+            if (aindaExiste) return aindaExiste;
+          }
+          return resultado.pets[0] ?? null;
+        });
+      }
+
+      if (isInitial) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
+    },
+    [userId],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      carregarPets();
+      carregarPets(true);
     }, [carregarPets]),
   );
 
@@ -72,22 +93,8 @@ export default function Perfil() {
   ): Promise<boolean> => {
     if (!selectedPet) return false;
 
-    let valorParaSalvar: string | number = novoValor;
-
-    if (field === "peso") {
-      valorParaSalvar = parseFloat(novoValor.replace(",", "."));
-    }
-
-    if (field === "data_nascimento") {
-      const dataFormatada = formatarDataParaSupabase(novoValor);
-
-      if (!dataFormatada) {
-        Alert.alert("Erro", "Data inválida. Use o formato DD/MM/AAAA.");
-        return false;
-      }
-
-      valorParaSalvar = dataFormatada;
-    }
+    const valorParaSalvar: string | number =
+      field === "peso" ? parseFloat(novoValor.replace(",", ".")) : novoValor;
 
     const resultado = await updatePetField(
       selectedPet.id_pet,
@@ -106,10 +113,66 @@ export default function Perfil() {
 
   const getEditingValue = (): string => {
     if (!selectedPet || !editingField) return "";
-
     const valor = selectedPet[editingField];
     return valor !== null && valor !== undefined ? String(valor) : "";
   };
+
+  const executarAcaoConfirmada = async () => {
+    if (confirmAction === "logout") {
+      await handleLogout();
+    }
+
+    if (confirmAction === "delete-account") {
+      const resultado = await handleDeleteAccount();
+
+      if (!resultado.sucess) {
+        Alert.alert("Erro", resultado.error);
+        setConfirmAction(null);
+        return;
+      }
+    }
+    if (confirmAction === "delete-pet") {
+      if (!selectedPet) {
+        setConfirmAction(null);
+        return;
+      }
+
+      const resultado = await handleDeletePet(
+        selectedPet.id_pet,
+        selectedPet.foto_url,
+      );
+
+      if (!resultado.sucess) {
+        Alert.alert("Erro", resultado.error);
+        setConfirmAction(null);
+        return;
+      }
+
+      await Promise.all([carregarPets(), reload()]);
+    }
+    setConfirmAction(null);
+  };
+
+  const configModal = {
+    logout: {
+      title: "Sair da conta",
+      message: "Você precisará entrar novamente para acessar o app.",
+      confirmLabel: "Sair",
+    },
+    "delete-account": {
+      title: "Excluir conta",
+      message:
+        "Essa ação é permanente. Todos os seus dados e pets cadastrados serão apagados e não poderão ser recuperados.",
+      confirmLabel: "Excluir conta",
+    },
+    "delete-pet": {
+      title: "Excluir pet",
+      message: selectedPet
+        ? `Tem certeza que deseja excluir ${selectedPet.nome}? Essa ação não pode ser desfeita.`
+        : "",
+      confirmLabel: "Excluir",
+    },
+  } as const;
 
   if (loading) {
     return (
@@ -118,6 +181,44 @@ export default function Perfil() {
       </View>
     );
   }
+
+  const handleEditPhoto = async () => {
+    if (!selectedPet) return;
+
+    const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissao.granted) {
+      Alert.alert(
+        "Permissão necessária",
+        "Precisamos de acesso às suas fotos.",
+      );
+      return;
+    }
+
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (resultado.canceled) return;
+
+    const novaImagemUri = resultado.assets[0].uri;
+
+    const resultadoTroca = await handleChangePetPhoto(
+      selectedPet.id_pet,
+      selectedPet.foto_url,
+      novaImagemUri,
+    );
+
+    if (!resultadoTroca.sucess) {
+      Alert.alert("Erro ao trocar foto", resultadoTroca.error);
+      return;
+    }
+
+    await carregarPets();
+  };
 
   return (
     <>
@@ -132,7 +233,7 @@ export default function Perfil() {
             pets={pets}
             selectedPet={selectedPet}
             onSelectPet={setSelectedPet}
-            onEditPhoto={() => {}}
+            onEditPhoto={handleEditPhoto}
           />
         )}
 
@@ -169,6 +270,12 @@ export default function Perfil() {
                 label: "Peso",
                 value: selectedPet.peso ? `${selectedPet.peso} kg` : undefined,
                 onPress: () => handleEditPetInfo("peso"),
+              },
+              {
+                icon: "trash-outline",
+                label: "Excluir pet",
+                destructive: true,
+                onPress: () => setConfirmAction("delete-pet"),
               },
             ]}
           />
@@ -213,13 +320,19 @@ export default function Perfil() {
         />
 
         <ProfileSection
-          title=""
+          title="Zona de perigo"
           options={[
             {
               icon: "log-out-outline",
               label: "Sair da conta",
               destructive: true,
-              onPress: handleLogout,
+              onPress: () => setConfirmAction("logout"),
+            },
+            {
+              icon: "trash-outline",
+              label: "Excluir conta",
+              destructive: true,
+              onPress: () => setConfirmAction("delete-account"),
             },
           ]}
         />
@@ -231,6 +344,17 @@ export default function Perfil() {
         currentValue={getEditingValue()}
         onClose={() => setEditModalVisible(false)}
         onSave={handleSaveField}
+      />
+
+      <ConfirmModal
+        visible={confirmAction !== null}
+        title={confirmAction ? configModal[confirmAction].title : ""}
+        message={confirmAction ? configModal[confirmAction].message : ""}
+        confirmLabel={
+          confirmAction ? configModal[confirmAction].confirmLabel : ""
+        }
+        onConfirm={executarAcaoConfirmada}
+        onCancel={() => setConfirmAction(null)}
       />
     </>
   );
@@ -244,7 +368,7 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 80,
     paddingBottom: 100,
   },
 

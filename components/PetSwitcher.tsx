@@ -158,7 +158,7 @@ export function PetSwitcher({
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     marginTop: 10,
     display: "flex",
     flexDirection: "row",

@@ -1,6 +1,13 @@
 import { checkUserPets } from "@/lib/actions/pet-actions";
 import { supabase } from "@/lib/supabase";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type PetsContextType = {
   hasPets: boolean | null;
@@ -16,7 +23,7 @@ export function PetsProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
 
     const {
@@ -48,17 +55,18 @@ export function PetsProvider({ children }: { children: React.ReactNode }) {
     }
 
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  return (
-    <PetsContext.Provider value={{ hasPets, userId, loading, reload: load }}>
-      {children}
-    </PetsContext.Provider>
+  const value = useMemo(
+    () => ({ hasPets, userId, loading, reload: load }),
+    [hasPets, userId, loading, load],
   );
+
+  return <PetsContext.Provider value={value}>{children}</PetsContext.Provider>;
 }
 
 export function usePetsContext() {
