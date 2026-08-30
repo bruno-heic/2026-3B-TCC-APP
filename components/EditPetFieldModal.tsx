@@ -159,6 +159,9 @@ export function EditPetFieldModal({
               editable={!loading}
               autoFocus
               secureTextEntry={isSenha}
+              autoComplete={isSenha ? "off" : undefined}
+              importantForAutofill={isSenha ? "no" : undefined}
+              textContentType={isSenha ? "oneTimeCode" : undefined}
               keyboardType={
                 isEmail
                   ? "email-address"
@@ -219,7 +222,7 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 35,
     padding: 22,
   },
 

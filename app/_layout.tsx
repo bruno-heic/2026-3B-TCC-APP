@@ -60,6 +60,7 @@ export default function RootLayout() {
     const isSelfManagedRoute = [
       "sign-up",
       "sign-up-pet",
+      "forgot-password",
       "verify-code",
       "new-password",
     ].includes(currentRoute as string);

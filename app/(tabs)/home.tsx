@@ -2,7 +2,6 @@ import { AddPetModal } from "@/components/AddPetModal";
 import { RequirePetsGate } from "@/components/RequirePetGate";
 import { usePetsContext } from "@/contexts/PetsContext";
 import { createPet, getUserPets } from "@/lib/actions/pet-actions";
-import { handleLogout } from "@/lib/actions/user-actions";
 import { Pet, PetFormData } from "@/lib/types/types";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -14,7 +13,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -65,10 +63,6 @@ export default function Home() {
   return (
     <>
       <View style={styles.container}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Sair</Text>
-        </TouchableOpacity>
-
         <RequirePetsGate onAddPet={() => setModalVisible(true)}>
           {loadingPets ? (
             <ActivityIndicator

@@ -13,6 +13,10 @@ import {
 
 import { GetUserResult } from "@/lib/types/types";
 
+export const handleCancelar = async () => {
+  await supabase.auth.signOut();
+};
+
 export async function getUser(): Promise<GetUserResult> {
   try {
     const {

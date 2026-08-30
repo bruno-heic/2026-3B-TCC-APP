@@ -42,7 +42,6 @@ export default function SignIn() {
       Alert.alert("Erro ao entrar", result.error);
       return;
     }
-    Alert.alert("Login feito com sucesso");
     router.replace("/(tabs)/home");
   };
 

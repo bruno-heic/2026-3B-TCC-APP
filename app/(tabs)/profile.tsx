@@ -1,3 +1,4 @@
+import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   EditableField,
@@ -21,10 +22,11 @@ import {
 import { Pet } from "@/lib/types/types";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,11 +51,13 @@ export default function Perfil() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingField, setEditingField] = useState<EditableField | null>(null);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+
+  const appState = useRef(AppState.currentState);
 
   const carregarUsuario = useCallback(async () => {
     const resultado = await getUser();
@@ -94,7 +98,6 @@ export default function Perfil() {
           return resultado.pets[0] ?? null;
         });
       }
-
       if (isInitial) {
         setLoading(false);
       } else {
@@ -103,6 +106,21 @@ export default function Perfil() {
     },
     [userId],
   );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === "active"
+      ) {
+        carregarUsuario();
+      }
+
+      appState.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [carregarUsuario]);
 
   useFocusEffect(
     useCallback(() => {
@@ -125,7 +143,7 @@ export default function Perfil() {
     field: EditableField,
     novoValor: string,
   ): Promise<boolean> => {
-    if (field === "nome_usuario" || field === "email" || field === "senha") {
+    if (field === "nome_usuario" || field === "senha") {
       const resultado = await updateUserField(field, novoValor);
 
       if (!resultado.sucess) {
@@ -140,6 +158,21 @@ export default function Perfil() {
 
     if (!selectedPet) {
       return false;
+    }
+    if (field === "email") {
+      const resultado = await updateUserField(field, novoValor);
+
+      if (!resultado.sucess) {
+        Alert.alert("Erro ao salvar", resultado.error);
+        return false;
+      }
+
+      Alert.alert(
+        "Confirme seu e-mail",
+        "Enviamos um link de confirmação para o novo e-mail. Ele só será atualizado depois que você confirmar.",
+      );
+
+      return true;
     }
 
     const valorParaSalvar: string | number =
@@ -378,7 +411,7 @@ export default function Perfil() {
               icon: "lock-closed-outline",
               label: "Senha",
               value: "••••••••",
-              onPress: () => handleEditUserInfo("senha"),
+              onPress: () => setChangePasswordVisible(true),
             },
             {
               icon: "hardware-chip-outline",
@@ -453,6 +486,15 @@ export default function Perfil() {
         }
         onConfirm={executarAcaoConfirmada}
         onCancel={() => setConfirmAction(null)}
+      />
+      <ChangePasswordModal
+        visible={changePasswordVisible}
+        email={usuario?.email ?? ""}
+        onClose={() => setChangePasswordVisible(false)}
+        onSuccess={() => {
+          setChangePasswordVisible(false);
+          Alert.alert("Sucesso", "Sua senha foi alterada.");
+        }}
       />
     </>
   );

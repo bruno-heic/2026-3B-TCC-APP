@@ -1,3 +1,7 @@
+import {
+  handleCancelar,
+  handleVerifyResetCode,
+} from "@/lib/actions/user-actions";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -14,8 +18,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import { handleVerifyResetCode } from "@/lib/actions/user-actions";
 
 const TAMANHO_CODIGO = 6;
 
@@ -83,7 +85,10 @@ export default function CodigoRecuperacao() {
         <SafeAreaView style={styles.container}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              handleCancelar();
+              router.back();
+            }}
           >
             <Ionicons name="chevron-back" size={26} color="#000" />
           </TouchableOpacity>

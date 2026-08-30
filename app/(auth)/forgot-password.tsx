@@ -15,7 +15,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { handleResetPassword } from "@/lib/actions/user-actions";
+import {
+  handleCancelar,
+  handleResetPassword,
+} from "@/lib/actions/user-actions";
 
 export default function EsqueciSenha() {
   const [email, setEmail] = useState("");
@@ -62,7 +65,10 @@ export default function EsqueciSenha() {
         <SafeAreaView style={styles.container}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              handleCancelar();
+              router.back();
+            }}
           >
             <Ionicons name="chevron-back" size={26} color="#000" />
           </TouchableOpacity>

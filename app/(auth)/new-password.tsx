@@ -15,7 +15,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { handleUpdatePassword } from "@/lib/actions/user-actions";
+import {
+  handleCancelar,
+  handleUpdatePassword,
+} from "@/lib/actions/user-actions";
 import { supabase } from "@/lib/supabase";
 
 export default function NovaSenha() {
@@ -61,10 +64,7 @@ export default function NovaSenha() {
     await supabase.auth.signOut();
 
     setLoading(false);
-
-    Alert.alert("Sucesso", "Sua senha foi redefinida.", [
-      { text: "OK", onPress: () => router.replace("/(auth)/sign-in") },
-    ]);
+    router.replace("/(auth)/sign-in");
   };
 
   return (
@@ -76,7 +76,10 @@ export default function NovaSenha() {
         <SafeAreaView style={styles.container}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              handleCancelar();
+              router.back();
+            }}
           >
             <Ionicons name="chevron-back" size={26} color="#000" />
           </TouchableOpacity>
