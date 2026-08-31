@@ -1,50 +1,122 @@
-# Welcome to your Expo app 👋
+<p align="center">
+  <img src="./assets/images/logoBr.png" alt="Logo do Petify" width="200">
+</p>
+<br>
+<p align="center">
+  <img src="./docs/screenshot.png" alt="Tela do Petify" width="700">
+</p>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# Petify
 
-## Get started
+### TCC — Etec de Taboão da Serra
 
-1. Install dependencies
+Um aplicativo de monitoramento inteligente para pets, que une uma coleira conectada a um app mobile para acompanhar a saúde, localização e bem-estar do animal em tempo real. O Petify nasce da ideia de que cuidar de um pet à distância não deveria depender de adivinhação.
 
-   ```bash
-   npm install
-   ```
+<p align="center">
+  <a href="COLOQUE-AQUI-O-LINK-DO-SITE-OU-REPOSITORIO-DO-HARDWARE">
+     <strong>Acessar o repositório do firmware/hardware</strong>
+  </a>
+</p>
 
-2. Start the app
+## Sobre
 
-   ```bash
-   npx expo start
-   ```
+O Petify simplifica o cuidado com pets por meio de:
 
-In the output, you'll find options to open the app in a
+* Coleira inteligente com sensores (Arduino/C++) conectada ao app
+* Cadastro e gerenciamento de múltiplos pets por usuário
+* Alertas configuráveis por regras, disparados a partir dos dados do dispositivo
+* Relatórios de saúde e atividade do pet
+* Autenticação e sincronização de dados via Supabase
+* Onboarding guiado — do cadastro do usuário ao primeiro pet
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+A proposta é dar tranquilidade ao tutor, tornando visível o que antes só podia ser notado durante o contato direto com o animal.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Tecnologias
 
-## Get a fresh project
+<p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" width="48" alt="React">
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="48" alt="TypeScript">
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.simpleicons.org/expo/000000" width="48" alt="Expo">
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.simpleicons.org/supabase/3ECF8E" width="48" alt="Supabase">
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/arduino/arduino-original.svg" width="48" alt="Arduino">
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg" width="48" alt="C++">
+</p>
+<p align="center">
+  React Native &nbsp;·&nbsp; Expo &nbsp;·&nbsp; TypeScript &nbsp;·&nbsp; Supabase (PostgreSQL) &nbsp;·&nbsp; Arduino / C++
+</p>
 
-When you're ready, run:
+## Como Rodar
+
+Clone o repositório e instale as dependências:
 
 ```bash
-npm run reset-project
+git clone https://github.com/seu-usuario/petify-app.git
+cd petify-app
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Configure as variáveis de ambiente criando um arquivo `.env` a partir do `.env.example`:
 
-## Learn more
+```bash
+EXPO_PUBLIC_SUPABASE_URL=<SUA_URL_SUPABASE>
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<SUA_CHAVE_SUPABASE>
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Inicie o servidor de desenvolvimento:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx expo start
+```
 
-## Join the community
+Escaneie o QR code com o Expo Go no seu dispositivo.
 
-Join our community of developers creating universal apps.
+## Estrutura do Projeto
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+petify-app/
+├── app/
+│   ├── (auth)/                  # Cadastro, login, recuperação de senha
+│   │   ├── sign-in.tsx
+│   │   ├── sign-up.tsx
+│   │   ├── sign-up-pet.tsx
+│   │   ├── forgot-password.tsx
+│   │   ├── verify-code.tsx
+│   │   └── new-password.tsx
+│   ├── (tabs)/                  # Navegação principal do app
+│   │   ├── home.tsx             # Visão geral do pet
+│   │   ├── devices.tsx          # Gerenciamento da coleira
+│   │   ├── reports.tsx          # Relatórios de saúde e atividade
+│   │   └── profile.tsx          # Perfil do usuário
+│   └── index.tsx
+├── components/
+│   ├── AddPetForm.tsx / AddPetModal.tsx   # Cadastro de pets
+│   ├── EditPetFieldModal.tsx              # Edição de dados do pet
+│   ├── PetSwitcher.tsx                    # Alternância entre pets
+│   ├── RequirePetGate.tsx / NoPetScreen.tsx
+│   ├── ProfileOptions.tsx / ChangePasswordModal.tsx
+│   ├── ConfirmModal.tsx
+│   └── sucessSignUser.tsx
+├── contexts/
+│   └── PetsContext.tsx          # Estado global dos pets do usuário
+├── lib/
+│   ├── actions/                 # Regras de negócio (usuário e pets)
+│   │   ├── user-actions.ts
+│   │   └── pet-actions.ts
+│   ├── types/types.ts           # Tipos compartilhados (Pet, SignUp, etc.)
+│   ├── utils/storage-utils.ts   # Upload e manipulação de imagens
+│   ├── supabase.ts              # Cliente Supabase
+│   └── config.ts
+└── assets/
+    └── images/                  # Logo, ícones e imagens da coleira
+```
+
+
+
+## Licença
+
+MIT
