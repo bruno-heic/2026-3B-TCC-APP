@@ -23,6 +23,12 @@ export type SucessSignUserProps = {
   onDoLater: () => void;
 };
 
+export type SucessCreatePetProps = {
+  visible: boolean;
+  onAddDevice: () => void;
+  onDoLater: () => void;
+};
+
 export type VerifyPetsResult =
   | { sucess: true; hasPets: boolean }
   | { sucess: false; error: string };

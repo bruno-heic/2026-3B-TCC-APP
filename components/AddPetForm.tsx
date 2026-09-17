@@ -1,7 +1,7 @@
 import { PetFormData } from "@/lib/types/types";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Image,
   StyleSheet,
@@ -23,6 +23,7 @@ export function PetForm({ onSubmit, submitLabel = "Cadastrar" }: PetFormProps) {
   const [dataNascimento, setDataNascimento] = useState("");
   const [peso, setPeso] = useState("");
   const [imagemUri, setImagemUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const escolherImagem = async () => {
     const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -44,7 +45,10 @@ export function PetForm({ onSubmit, submitLabel = "Cadastrar" }: PetFormProps) {
   };
 
   const handleSubmit = () => {
+    setLoading(true);
     onSubmit({ nome, especie, raca, dataNascimento, peso, imagemUri });
+
+    setLoading(false);
   };
 
   return (
@@ -140,7 +144,11 @@ export function PetForm({ onSubmit, submitLabel = "Cadastrar" }: PetFormProps) {
         onChangeText={setPeso}
       />
 
-      <TouchableOpacity style={styles.botao} onPress={handleSubmit}>
+      <TouchableOpacity
+        style={[styles.botao, loading && styles.buttonDisabled]}
+        disabled={loading}
+        onPress={handleSubmit}
+      >
         <Text style={styles.textoBotao}>{submitLabel}</Text>
       </TouchableOpacity>
     </View>
@@ -206,4 +214,8 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   textoBotao: { fontFamily: "Nunito-SemiBold", fontSize: 18, color: "#fff" },
+  buttonDisabled: {
+    backgroundColor: "#A9A9A9",
+    opacity: 0.6,
+  },
 });

@@ -1,8 +1,9 @@
 import { PetForm } from "@/components/AddPetForm";
+import { SucessCreatePet } from "@/components/SucessCreatePet";
 import { createPet } from "@/lib/actions/pet-actions";
 import { PetFormData } from "@/lib/types/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import { useState } from "react";
 import {
   Alert,
   SafeAreaView,
@@ -13,7 +14,9 @@ import {
 } from "react-native";
 
 export default function CadastroPet() {
+  const [modalVisivel, setModalVisivel] = useState(false);
   const router = useRouter();
+
   const { idUsuario } = useLocalSearchParams();
 
   const handleSubmit = async (petData: PetFormData) => {
@@ -28,38 +31,58 @@ export default function CadastroPet() {
       return;
     }
 
-    router.replace("/(tabs)/home");
+    setModalVisivel(true);
+  };
+
+  const handleAddDevice = () => {
+    setModalVisivel(false);
+    router.push({
+      pathname: "/(auth)/add-collar",
+      params: { idUsuario: idUsuario },
+    });
+  };
+
+  const handleDoLater = () => {
+    setModalVisivel(false);
+    router.replace("/home");
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <Text style={styles.title}>Cadastro do pet</Text>
+    <>
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          <Text style={styles.title}>Cadastro do pet</Text>
 
-        <View style={styles.progressContainer}>
-          <View style={styles.line} />
-          <View style={styles.steps}>
-            <View style={styles.step}>
-              <View style={styles.circle} />
-              <Text style={styles.stepText}>Etapa 1</Text>
-            </View>
-            <View style={styles.step}>
-              <View style={[styles.circle, styles.active]} />
-              <Text style={styles.stepText}>Etapa 2</Text>
-            </View>
-            <View style={styles.step}>
-              <View style={styles.circle} />
-              <Text style={styles.stepText}>Etapa 3</Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.line} />
+            <View style={styles.steps}>
+              <View style={styles.step}>
+                <View style={styles.circle} />
+                <Text style={styles.stepText}>Etapa 1</Text>
+              </View>
+              <View style={styles.step}>
+                <View style={[styles.circle, styles.active]} />
+                <Text style={styles.stepText}>Etapa 2</Text>
+              </View>
+              <View style={styles.step}>
+                <View style={styles.circle} />
+                <Text style={styles.stepText}>Etapa 3</Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        <PetForm onSubmit={handleSubmit} />
-      </ScrollView>
-    </SafeAreaView>
+          <PetForm onSubmit={handleSubmit} />
+        </ScrollView>
+      </SafeAreaView>
+      <SucessCreatePet
+        onAddDevice={handleAddDevice}
+        onDoLater={handleDoLater}
+        visible={modalVisivel}
+      />
+    </>
   );
 }
 

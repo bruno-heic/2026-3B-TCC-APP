@@ -36,7 +36,6 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  // Carrega a sessão inicial e escuta mudanças (login/logout)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -55,15 +54,20 @@ export default function RootLayout() {
   useEffect(() => {
     if (sessionLoading) return;
 
-    const inAuthGroup = segments[0] === "(auth)";
-    const currentRoute = segments[segments.length - 1];
+    const segmentsArray = segments as unknown as string[];
+
+    if (segmentsArray.length === 0) return;
+
+    const inAuthGroup = segmentsArray[0] === "(auth)";
+    const currentRoute = segmentsArray[segmentsArray.length - 1];
     const isSelfManagedRoute = [
       "sign-up",
       "sign-up-pet",
       "forgot-password",
       "verify-code",
       "new-password",
-    ].includes(currentRoute as string);
+      "add-collar",
+    ].includes(currentRoute);
 
     if (session && inAuthGroup && !isSelfManagedRoute) {
       router.replace("/(tabs)/home");
@@ -71,6 +75,30 @@ export default function RootLayout() {
       router.replace("/(auth)/sign-in");
     }
   }, [session, segments, sessionLoading]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (
+        error?.message.includes("User from sub claim in JWT does not exist")
+      ) {
+        supabase.auth.signOut();
+        setSession(null);
+        setSessionLoading(false);
+        return;
+      }
+
+      setSession(session);
+      setSessionLoading(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      },
+    );
+
+    return () => authListener.subscription.unsubscribe();
+  }, []);
 
   return (
     <>
