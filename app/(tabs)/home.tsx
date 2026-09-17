@@ -2,7 +2,9 @@ import { AddPetModal } from "@/components/AddPetModal";
 import { RequirePetsGate } from "@/components/RequirePetGate";
 import { usePetsContext } from "@/contexts/PetsContext";
 import { createPet, getUserPets } from "@/lib/actions/pet-actions";
+import { getUser } from "@/lib/actions/user-actions";
 import { Pet, PetFormData } from "@/lib/types/types";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 
@@ -13,14 +15,32 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
+
+type Usuario = {
+  id_usuario: number;
+  user_id: string;
+  nome: string;
+  email: string;
+};
 
 export default function Home() {
   const [modalVisible, setModalVisible] = useState(false);
   const [pets, setPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
   const { userId, reload } = usePetsContext();
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const carregarUsuario = useCallback(async () => {
+    const resultado = await getUser();
+
+    if (resultado.sucess) {
+      setUsuario(resultado.user);
+    } else {
+      Alert.alert("Erro", resultado.error);
+    }
+  }, []);
 
   const carregarPets = useCallback(async () => {
     if (!userId) return;
@@ -38,7 +58,8 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       carregarPets();
-    }, [carregarPets]),
+      carregarUsuario();
+    }, [carregarUsuario, carregarPets]),
   );
 
   const handleSubmitPet = async (petData: PetFormData): Promise<boolean> => {
@@ -63,6 +84,40 @@ export default function Home() {
   return (
     <>
       <View style={styles.container}>
+        <View
+          style={{
+            paddingInline: 20,
+            paddingTop: 70,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexDirection: "row",
+          }}
+        >
+          <Text
+            style={{
+              color: "#003C75",
+              fontFamily: "Nunito-Bold",
+              fontSize: 26,
+            }}
+          >
+            Olá, {usuario?.nome}!
+          </Text>
+          <TouchableOpacity
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: "#C3E2F1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="notifications" color="#1F1F1F" size={20} />
+          </TouchableOpacity>
+        </View>
+        <Text>Tudo normal com a {pets[0]?.nome}</Text>
         <RequirePetsGate onAddPet={() => setModalVisible(true)}>
           {loadingPets ? (
             <ActivityIndicator
