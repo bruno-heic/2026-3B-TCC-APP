@@ -98,7 +98,7 @@ export default function Home() {
             style={{
               color: "#003C75",
               fontFamily: "Nunito-Bold",
-              fontSize: 26,
+              fontSize: 24,
             }}
           >
             Olá, {usuario?.nome}!
