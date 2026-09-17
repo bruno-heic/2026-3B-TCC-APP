@@ -119,6 +119,7 @@ export default function AddCollar() {
               <TouchableOpacity
                 style={[styles.button, loading && styles.buttonDisabled]}
                 disabled={loading}
+                onPress={() => router.replace("/(tabs)/home")}
               >
                 <Text style={styles.buttonText}>Conectar dispositivo</Text>
               </TouchableOpacity>
