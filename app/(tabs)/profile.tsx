@@ -140,59 +140,96 @@ export default function Perfil() {
   };
 
   const handleSaveField = async (
-    field: EditableField,
-    novoValor: string,
-  ): Promise<boolean> => {
-    if (field === "nome_usuario" || field === "senha") {
-      const resultado = await updateUserField(field, novoValor);
+  field: EditableField,
+  novoValor: string,
+): Promise<boolean> => {
+  console.log("handleSaveField:", field, novoValor);
 
-      if (!resultado.sucess) {
-        Alert.alert("Erro ao salvar", resultado.error);
-        return false;
-      }
+  // ========================================
+  // CAMPOS DO USUÁRIO
+  // ========================================
 
-      await carregarUsuario();
-
-      return true;
-    }
-
-    if (!selectedPet) {
-      return false;
-    }
-    if (field === "email") {
-      const resultado = await updateUserField(field, novoValor);
-
-      if (!resultado.sucess) {
-        Alert.alert("Erro ao salvar", resultado.error);
-        return false;
-      }
-
-      Alert.alert(
-        "Confirme seu e-mail",
-        "Enviamos um link de confirmação para o novo e-mail. Ele só será atualizado depois que você confirmar.",
-      );
-
-      return true;
-    }
-
-    const valorParaSalvar: string | number =
-      field === "peso" ? parseFloat(novoValor.replace(",", ".")) : novoValor;
-
-    const resultado = await updatePetField(
-      selectedPet.id_pet,
-      field,
-      valorParaSalvar,
-    );
+  if (field === "nome_usuario") {
+    const resultado = await updateUserField(field, novoValor);
 
     if (!resultado.sucess) {
       Alert.alert("Erro ao salvar", resultado.error);
       return false;
     }
 
-    await carregarPets();
+    await carregarUsuario();
 
     return true;
-  };
+  }
+
+  if (field === "email") {
+    console.log("Atualizando email:", novoValor);
+
+    const resultado = await updateUserField("email", novoValor);
+
+    console.log("Resultado update email:", resultado);
+
+    if (!resultado.sucess) {
+      Alert.alert("Erro ao salvar", resultado.error);
+      return false;
+    }
+
+    Alert.alert(
+      "Confirme seu e-mail",
+      "Enviamos um link de confirmação para o novo e-mail. O endereço só será atualizado depois que você confirmar.",
+    );
+
+    return true;
+  }
+
+  if (field === "senha") {
+    const resultado = await updateUserField("senha", novoValor);
+
+    if (!resultado.sucess) {
+      Alert.alert("Erro ao salvar", resultado.error);
+      return false;
+    }
+
+    return true;
+  }
+
+  // ========================================
+  // CAMPOS DO PET
+  // ========================================
+
+  if (!selectedPet) {
+    Alert.alert("Erro", "Nenhum pet selecionado.");
+    return false;
+  }
+
+  const valorParaSalvar: string | number =
+    field === "peso"
+      ? parseFloat(novoValor.replace(",", "."))
+      : novoValor;
+
+  if (field === "peso" && typeof valorParaSalvar === "number") {
+    if (isNaN(valorParaSalvar)) {
+      Alert.alert("Erro", "Digite um peso válido.");
+      return false;
+    }
+  }
+
+  const resultado = await updatePetField(
+    selectedPet.id_pet,
+    field,
+    valorParaSalvar,
+  );
+
+  if (!resultado.sucess) {
+    Alert.alert("Erro ao salvar", resultado.error);
+    return false;
+  }
+
+  await carregarPets();
+
+  return true;
+};
+
 
   const getEditingValue = (): string => {
     if (!editingField) {

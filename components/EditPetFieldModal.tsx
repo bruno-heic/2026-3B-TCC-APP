@@ -77,21 +77,31 @@ export function EditPetFieldModal({
   };
 
   const handleSalvar = async () => {
-    if (!valor.trim()) {
-      Alert.alert("Atenção", "O campo não pode ficar vazio.");
-      return;
-    }
+  if (!valor.trim()) {
+    Alert.alert("Atenção", "O campo não pode ficar vazio.");
+    return;
+  }
 
+  try {
     setLoading(true);
 
     const sucesso = await onSave(field, valor.trim());
 
-    setLoading(false);
-
     if (sucesso) {
       onClose();
     }
-  };
+  } catch (error) {
+    console.error("Erro ao salvar campo:", error);
+
+    Alert.alert(
+      "Erro",
+      "Não foi possível salvar a alteração. Tente novamente.",
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const isEspecie = field === "especie";
   const isSenha = field === "senha";

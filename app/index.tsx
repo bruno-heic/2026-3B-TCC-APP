@@ -24,7 +24,7 @@ export default function Index() {
     >
       <Image
         source={require("@/assets/images/logoBr.png")}
-        style={{ width: 170, height: 150, resizeMode: "contain" }}
+        style={{ width: 300, resizeMode: "contain" }}
       />
     </View>
   );
