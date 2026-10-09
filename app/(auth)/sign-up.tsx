@@ -2,7 +2,7 @@ import { SucessSignUserModal } from "@/components/sucessSignUser";
 import { handleSignUser } from "@/lib/actions/user-actions";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -89,7 +89,7 @@ export default function SignUp() {
 
   const handleDoLater = () => {
     setModalVisivel(false);
-    router.replace("/home");
+    router.replace("/(auth)/add-collar");
   };
 
   return (
