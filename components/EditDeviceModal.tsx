@@ -34,6 +34,7 @@ type Props = {
   onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
+  onManageSafeAreas: (pet: Pet) => void;
 };
 
 const BLUE = "#007AFF";
@@ -45,6 +46,7 @@ export function ManageDeviceModal({
   onClose,
   onSaved,
   onDeleted,
+  onManageSafeAreas,
 }: Props) {
   const [nome, setNome] = useState("");
   const [idPet, setIdPet] = useState<number | null>(null);
@@ -76,7 +78,7 @@ export function ManageDeviceModal({
       const resultado = await updateCollarDevice({
         idDispositivo: device.id_dispositivo,
         idPet,
-        nomePersonalizado: nome,
+        nomePersonalizado: nome.trim(),
       });
 
       if (!resultado.sucess) {
@@ -90,9 +92,34 @@ export function ManageDeviceModal({
           onPress: onSaved,
         },
       ]);
+    } catch (error) {
+      Alert.alert(
+        "Erro ao salvar",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar o dispositivo.",
+      );
     } finally {
       setSalvando(false);
     }
+  };
+
+  const abrirAreasSeguras = () => {
+    if (!device) return;
+
+    // Usa o pet já vinculado à coleira no banco.
+    // Se o usuário selecionou outro pet, precisa salvar primeiro.
+    const petVinculado = pets.find((item) => item.id_pet === device.id_pet);
+
+    if (!petVinculado) {
+      Alert.alert(
+        "Pet não encontrado",
+        "Esta coleira não possui um pet válido associado. Selecione um pet, salve as alterações e tente novamente.",
+      );
+      return;
+    }
+
+    onManageSafeAreas(petVinculado);
   };
 
   const confirmarRemocao = () => {
@@ -134,6 +161,13 @@ export function ManageDeviceModal({
           onPress: onDeleted,
         },
       ]);
+    } catch (error) {
+      Alert.alert(
+        "Erro ao remover",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível remover o dispositivo.",
+      );
     } finally {
       setSalvando(false);
     }
@@ -158,6 +192,8 @@ export function ManageDeviceModal({
               onPress={onClose}
               disabled={salvando}
               style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Fechar edição da coleira"
             >
               <Ionicons name="close" size={23} color="#111111" />
             </Pressable>
@@ -170,17 +206,20 @@ export function ManageDeviceModal({
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             <View style={styles.iconCircle}>
               <Ionicons name="hardware-chip-outline" size={34} color={BLUE} />
             </View>
 
             <Text style={styles.title}>Informações do dispositivo</Text>
+
             <Text style={styles.subtitle}>
               Altere o nome ou escolha outro pet para esta coleira.
             </Text>
 
             <Text style={styles.label}>Nome personalizado</Text>
+
             <TextInput
               style={styles.input}
               value={nome}
@@ -217,6 +256,7 @@ export function ManageDeviceModal({
 
                     <View style={styles.petInfo}>
                       <Text style={styles.petName}>{pet.nome}</Text>
+
                       {!!pet.especie && (
                         <Text style={styles.petDescription}>
                           {[pet.especie, pet.raca].filter(Boolean).join(" · ")}
@@ -242,6 +282,7 @@ export function ManageDeviceModal({
                 size={20}
                 color={BLUE}
               />
+
               <Text style={styles.infoText}>
                 O ID do produto é {device.id_produto}. Editar ou remover o
                 vínculo não altera o status de ativação do produto.
@@ -249,8 +290,35 @@ export function ManageDeviceModal({
             </View>
 
             <Pressable
+              style={styles.safeAreaButton}
+              onPress={abrirAreasSeguras}
+              disabled={salvando}
+              accessibilityRole="button"
+            >
+              <View style={styles.safeAreaIcon}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={23}
+                  color={BLUE}
+                />
+              </View>
+
+              <View style={styles.safeAreaInfo}>
+                <Text style={styles.safeAreaTitle}>
+                  Gerenciar áreas seguras
+                </Text>
+
+                <Text style={styles.safeAreaSubtitle}>
+                  Defina os locais seguros deste pet
+                </Text>
+              </View>
+
+              <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            </Pressable>
+
+            <Pressable
               style={[styles.saveButton, salvando && styles.disabledButton]}
-              onPress={salvar}
+              onPress={() => void salvar()}
               disabled={salvando}
             >
               {salvando ? (
@@ -266,6 +334,7 @@ export function ManageDeviceModal({
               disabled={salvando}
             >
               <Ionicons name="trash-outline" size={18} color="#D93025" />
+
               <Text style={styles.deleteButtonText}>Remover dispositivo</Text>
             </Pressable>
           </ScrollView>
@@ -397,13 +466,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2F7FF",
     borderRadius: 12,
     padding: 13,
-    marginBottom: 22,
+    marginBottom: 16,
   },
   infoText: {
     flex: 1,
     color: "#4F5B6A",
     fontSize: 13,
     lineHeight: 19,
+  },
+  safeAreaButton: {
+    minHeight: 76,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#D7E8F8",
+    backgroundColor: "#F8FBFF",
+    marginBottom: 22,
+  },
+  safeAreaIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EAF3FF",
+  },
+  safeAreaInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  safeAreaTitle: {
+    color: "#111111",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  safeAreaSubtitle: {
+    color: "#6E6E73",
+    fontSize: 12,
+    lineHeight: 17,
   },
   saveButton: {
     minHeight: 52,

@@ -351,8 +351,10 @@ export function AddDeviceModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={cancelar}
+      statusBarTranslucent={false}
+      navigationBarTranslucent={false}
     >
       <KeyboardAvoidingView
         style={styles.container}
@@ -397,7 +399,7 @@ export function AddDeviceModal({
 
           <Text style={styles.label}>Número de série</Text>
 
-          <View style={styles.inputContainer}>
+          <View style={styles.inputContainer} pointerEvents="box-none">
             <Ionicons name="barcode-outline" size={20} color={CINZA} />
 
             <TextInput
@@ -422,7 +424,7 @@ export function AddDeviceModal({
 
           <Text style={styles.label}>Nome da rede</Text>
 
-          <View style={styles.inputContainer}>
+          <View style={styles.inputContainer} pointerEvents="box-none">
             <Ionicons name="wifi-outline" size={20} color={CINZA} />
 
             <TextInput
@@ -440,7 +442,7 @@ export function AddDeviceModal({
 
           <Text style={styles.label}>Senha do Wi-Fi</Text>
 
-          <View style={styles.inputContainer}>
+          <View style={styles.inputContainer} pointerEvents="box-none">
             <Ionicons name="lock-closed-outline" size={20} color={CINZA} />
 
             <TextInput
@@ -542,7 +544,7 @@ export function AddDeviceModal({
 
           <Text style={styles.label}>Nome personalizado</Text>
 
-          <View style={styles.inputContainer}>
+          <View style={styles.inputContainer} pointerEvents="box-none">
             <Ionicons name="create-outline" size={20} color={CINZA} />
 
             <TextInput

@@ -53,6 +53,12 @@
           "bluetoothAlwaysPermission": "O app usa Bluetooth para se conectar à coleira do seu pet."
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permita que o aplicativo use sua localização para cadastrar áreas seguras do seu pet."
+        }
+      ],
       "expo-font",
       "expo-sqlite",
       "expo-image",

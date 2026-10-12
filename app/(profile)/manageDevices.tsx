@@ -1,5 +1,6 @@
 import { AddDeviceModal } from "@/components/AddCollarModal";
 import { ManageDeviceModal } from "@/components/EditDeviceModal";
+import { SafeAreasModal } from "@/components/SafeAreasModal";
 import {
   getAvailableProducts,
   getCollars,
@@ -82,8 +83,12 @@ export default function ManageDevicesScreen() {
   const [atualizando, setAtualizando] = useState(false);
 
   const [adicionarModalVisivel, setAdicionarModalVisivel] = useState(false);
+
   const [dispositivoEmEdicao, setDispositivoEmEdicao] =
     useState<CollarDevice | null>(null);
+
+  // Pet cujas áreas seguras estão sendo gerenciadas.
+  const [petAreas, setPetAreas] = useState<Pet | null>(null);
 
   const carregarDados = useCallback(async (refresh = false) => {
     try {
@@ -147,7 +152,7 @@ export default function ManageDevicesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      carregarDados();
+      void carregarDados();
     }, [carregarDados]),
   );
 
@@ -158,7 +163,6 @@ export default function ManageDevicesScreen() {
           (dispositivo) => dispositivo.id_pet === petSelecionado,
         );
 
-  // A opção de adicionar fica disponível mesmo sem produtos no catálogo.
   function adicionarDispositivo() {
     setAdicionarModalVisivel(true);
   }
@@ -166,8 +170,10 @@ export default function ManageDevicesScreen() {
   function renderDeviceCard(dispositivo: CollarDevice) {
     const produto = dispositivo.produto;
     const tipo = getProductType(produto);
+
     const nome =
       dispositivo.nome_personalizado?.trim() || getProductName(produto);
+
     const pet = pets.find((item) => item.id_pet === dispositivo.id_pet);
 
     return (
@@ -271,7 +277,7 @@ export default function ManageDevicesScreen() {
         refreshControl={
           <RefreshControl
             refreshing={atualizando}
-            onRefresh={() => carregarDados(true)}
+            onRefresh={() => void carregarDados(true)}
             tintColor={BLUE}
           />
         }
@@ -341,6 +347,7 @@ export default function ManageDevicesScreen() {
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Dispositivos conectados</Text>
+
             <Text style={styles.sectionCount}>
               {dispositivosFiltrados.length}
             </Text>
@@ -371,10 +378,10 @@ export default function ManageDevicesScreen() {
             </View>
           )}
 
-          {/* Esta seção e seu botão aparecem sempre. */}
           <View style={styles.addSectionHeader}>
             <View style={styles.addSectionText}>
               <Text style={styles.sectionTitle}>Adicionar dispositivos</Text>
+
               <Text style={styles.addSectionSubtitle}>
                 Cadastre uma coleira usando seu número de série.
               </Text>
@@ -393,6 +400,7 @@ export default function ManageDevicesScreen() {
 
             <View style={styles.primaryAddInfo}>
               <Text style={styles.primaryAddTitle}>Adicionar dispositivo</Text>
+
               <Text style={styles.primaryAddSubtitle}>
                 Informar número de série e escolher pet
               </Text>
@@ -404,6 +412,7 @@ export default function ManageDevicesScreen() {
           {!carregando && produtos.length > 0 && (
             <>
               <Text style={styles.catalogTitle}>Produtos disponíveis</Text>
+
               <View style={styles.cardList}>
                 {produtos.map(renderProductCard)}
               </View>
@@ -417,6 +426,7 @@ export default function ManageDevicesScreen() {
                 size={22}
                 color="#8A8A8E"
               />
+
               <Text style={styles.noProductsText}>
                 Não há outros produtos no catálogo. Você ainda pode adicionar
                 uma coleira informando seu número de série.
@@ -426,10 +436,11 @@ export default function ManageDevicesScreen() {
 
           <Pressable
             style={styles.refreshButton}
-            onPress={() => carregarDados(true)}
+            onPress={() => void carregarDados(true)}
             disabled={atualizando}
           >
             <Ionicons name="refresh-outline" size={17} color={BLUE} />
+
             <Text style={styles.refreshButtonText}>Atualizar dispositivos</Text>
           </Pressable>
         </View>
@@ -442,12 +453,23 @@ export default function ManageDevicesScreen() {
         onClose={() => setDispositivoEmEdicao(null)}
         onSaved={() => {
           setDispositivoEmEdicao(null);
-          carregarDados(true);
+          void carregarDados(true);
         }}
         onDeleted={() => {
           setDispositivoEmEdicao(null);
-          carregarDados(true);
+          void carregarDados(true);
         }}
+        onManageSafeAreas={(pet) => {
+          // Fecha o modal da coleira e abre o modal do pet.
+          setDispositivoEmEdicao(null);
+          setPetAreas(pet);
+        }}
+      />
+
+      <SafeAreasModal
+        visible={petAreas !== null}
+        pet={petAreas}
+        onClose={() => setPetAreas(null)}
       />
 
       <AddDeviceModal
