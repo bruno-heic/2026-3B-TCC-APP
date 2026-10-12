@@ -453,9 +453,8 @@ export default function ManageDevicesScreen() {
       <AddDeviceModal
         visible={adicionarModalVisivel}
         onClose={() => setAdicionarModalVisivel(false)}
-        onSuccess={() => {
-          setAdicionarModalVisivel(false);
-          carregarDados(true);
+        onSaved={() => {
+          void carregarDados(true);
         }}
       />
     </SafeAreaView>

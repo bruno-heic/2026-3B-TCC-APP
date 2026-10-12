@@ -5,7 +5,7 @@ import { RequirePetsGate } from "@/components/RequirePetGate";
 import { usePetsContext } from "@/contexts/PetsContext";
 import { createPet } from "@/lib/actions/pet-actions";
 import { PetFormData } from "@/lib/types/types";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, View } from "react-native";
 
 export default function Devices() {
@@ -20,21 +20,38 @@ export default function Devices() {
       return false;
     }
 
-    const resultado = await createPet({
-      idUsuario: userId,
-      ...petData,
-    });
+    try {
+      const resultado = await createPet({
+        idUsuario: userId,
+        ...petData,
+      });
 
-    if (!resultado.sucess) {
-      Alert.alert("Erro ao cadastrar pet", resultado.error);
+      if (!resultado.sucess) {
+        Alert.alert(
+          "Erro ao cadastrar pet",
+          resultado.error || "Não foi possível cadastrar o pet.",
+        );
+        return false;
+      }
+
+      Alert.alert("Pet adicionado!");
+      setPetModalVisible(false);
+
+      return true;
+    } catch (error) {
+      Alert.alert(
+        "Erro",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível cadastrar o pet.",
+      );
       return false;
     }
-
-    Alert.alert("Pet adicionado!");
-    setPetModalVisible(false);
-
-    return true;
   };
+
+  const handleDeviceSaved = useCallback(() => {
+    setDeviceModalVisible(false);
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>
@@ -53,9 +70,7 @@ export default function Devices() {
       <AddDeviceModal
         visible={deviceModalVisible}
         onClose={() => setDeviceModalVisible(false)}
-        onSuccess={() => {
-          setDeviceModalVisible(false);
-        }}
+        onSaved={handleDeviceSaved}
       />
     </View>
   );
