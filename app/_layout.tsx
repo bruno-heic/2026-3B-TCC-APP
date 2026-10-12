@@ -68,6 +68,7 @@ export default function RootLayout() {
       "new-password",
       "add-collar",
       "collar-setup",
+      "collar-and-pet-setup",
     ].includes(currentRoute);
 
     if (session && inAuthGroup && !isSelfManagedRoute) {

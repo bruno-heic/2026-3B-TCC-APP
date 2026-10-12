@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -73,8 +73,6 @@ export function AddPetModal({ visible, onClose, onSubmit }: AddPetModalProps) {
 
     setLoading(false);
 
-    // só limpa os campos e fecha se o cadastro deu certo;
-    // se falhou, o usuário não perde o que já preencheu
     if (sucesso) {
       limparCampos();
     }

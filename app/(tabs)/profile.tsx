@@ -1,3 +1,4 @@
+import { AddPetModal } from "@/components/AddPetModal";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import {
@@ -8,6 +9,7 @@ import { PetSwitcher } from "@/components/PetSwitcher";
 import { ProfileSection } from "@/components/ProfileOptions";
 import { usePetsContext } from "@/contexts/PetsContext";
 import {
+  createPet,
   getUserPets,
   handleChangePetPhoto,
   handleDeletePet,
@@ -19,10 +21,10 @@ import {
   handleLogout,
   updateUserField,
 } from "@/lib/actions/user-actions";
-import { Pet } from "@/lib/types/types";
+import { Pet, PetFormData } from "@/lib/types/types";
 import * as ImagePicker from "expo-image-picker";
-import { useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +32,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -44,7 +47,7 @@ type Usuario = {
 
 export default function Perfil() {
   const { userId, reload } = usePetsContext();
-
+  const [modalVisible, setModalVisible] = useState(false);
   const [pets, setPets] = useState<Pet[]>([]);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
@@ -129,6 +132,25 @@ export default function Perfil() {
     }, [carregarUsuario, carregarPets]),
   );
 
+  const handleSubmitPet = async (petData: PetFormData): Promise<boolean> => {
+    if (!userId) {
+      Alert.alert("Erro", "Usuário não identificado.");
+      return false;
+    }
+
+    const resultado = await createPet({ idUsuario: userId, ...petData });
+
+    if (!resultado.sucess) {
+      Alert.alert("Erro ao cadastrar pet", resultado.error);
+      return false;
+    }
+
+    setModalVisible(false);
+    await reload();
+    await carregarPets();
+    return true;
+  };
+
   const handleEditPetInfo = (field: EditableField) => {
     setEditingField(field);
     setEditModalVisible(true);
@@ -140,96 +162,93 @@ export default function Perfil() {
   };
 
   const handleSaveField = async (
-  field: EditableField,
-  novoValor: string,
-): Promise<boolean> => {
-  console.log("handleSaveField:", field, novoValor);
+    field: EditableField,
+    novoValor: string,
+  ): Promise<boolean> => {
+    console.log("handleSaveField:", field, novoValor);
 
-  // ========================================
-  // CAMPOS DO USUÁRIO
-  // ========================================
+    // ========================================
+    // CAMPOS DO USUÁRIO
+    // ========================================
 
-  if (field === "nome_usuario") {
-    const resultado = await updateUserField(field, novoValor);
+    if (field === "nome_usuario") {
+      const resultado = await updateUserField(field, novoValor);
 
-    if (!resultado.sucess) {
-      Alert.alert("Erro ao salvar", resultado.error);
+      if (!resultado.sucess) {
+        Alert.alert("Erro ao salvar", resultado.error);
+        return false;
+      }
+
+      await carregarUsuario();
+
+      return true;
+    }
+
+    if (field === "email") {
+      console.log("Atualizando email:", novoValor);
+
+      const resultado = await updateUserField("email", novoValor);
+
+      console.log("Resultado update email:", resultado);
+
+      if (!resultado.sucess) {
+        Alert.alert("Erro ao salvar", resultado.error);
+        return false;
+      }
+
+      Alert.alert(
+        "Confirme seu e-mail",
+        "Enviamos um link de confirmação para o novo e-mail. O endereço só será atualizado depois que você confirmar.",
+      );
+
+      return true;
+    }
+
+    if (field === "senha") {
+      const resultado = await updateUserField("senha", novoValor);
+
+      if (!resultado.sucess) {
+        Alert.alert("Erro ao salvar", resultado.error);
+        return false;
+      }
+
+      return true;
+    }
+
+    // ========================================
+    // CAMPOS DO PET
+    // ========================================
+
+    if (!selectedPet) {
+      Alert.alert("Erro", "Nenhum pet selecionado.");
       return false;
     }
 
-    await carregarUsuario();
+    const valorParaSalvar: string | number =
+      field === "peso" ? parseFloat(novoValor.replace(",", ".")) : novoValor;
 
-    return true;
-  }
-
-  if (field === "email") {
-    console.log("Atualizando email:", novoValor);
-
-    const resultado = await updateUserField("email", novoValor);
-
-    console.log("Resultado update email:", resultado);
-
-    if (!resultado.sucess) {
-      Alert.alert("Erro ao salvar", resultado.error);
-      return false;
+    if (field === "peso" && typeof valorParaSalvar === "number") {
+      if (isNaN(valorParaSalvar)) {
+        Alert.alert("Erro", "Digite um peso válido.");
+        return false;
+      }
     }
 
-    Alert.alert(
-      "Confirme seu e-mail",
-      "Enviamos um link de confirmação para o novo e-mail. O endereço só será atualizado depois que você confirmar.",
+    const resultado = await updatePetField(
+      selectedPet.id_pet,
+      field,
+      valorParaSalvar,
     );
 
-    return true;
-  }
-
-  if (field === "senha") {
-    const resultado = await updateUserField("senha", novoValor);
-
     if (!resultado.sucess) {
       Alert.alert("Erro ao salvar", resultado.error);
       return false;
     }
 
+    await carregarPets();
+
     return true;
-  }
-
-  // ========================================
-  // CAMPOS DO PET
-  // ========================================
-
-  if (!selectedPet) {
-    Alert.alert("Erro", "Nenhum pet selecionado.");
-    return false;
-  }
-
-  const valorParaSalvar: string | number =
-    field === "peso"
-      ? parseFloat(novoValor.replace(",", "."))
-      : novoValor;
-
-  if (field === "peso" && typeof valorParaSalvar === "number") {
-    if (isNaN(valorParaSalvar)) {
-      Alert.alert("Erro", "Digite um peso válido.");
-      return false;
-    }
-  }
-
-  const resultado = await updatePetField(
-    selectedPet.id_pet,
-    field,
-    valorParaSalvar,
-  );
-
-  if (!resultado.sucess) {
-    Alert.alert("Erro ao salvar", resultado.error);
-    return false;
-  }
-
-  await carregarPets();
-
-  return true;
-};
-
+  };
 
   const getEditingValue = (): string => {
     if (!editingField) {
@@ -374,7 +393,22 @@ export default function Perfil() {
         style={styles.container}
         contentContainerStyle={styles.content}
       >
-        <Text style={styles.title}>Perfil</Text>
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Text style={styles.title}>Perfil</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={styles.addButtonText}>+ Adicionar pet</Text>
+          </TouchableOpacity>
+        </View>
 
         {selectedPet && (
           <PetSwitcher
@@ -453,7 +487,9 @@ export default function Perfil() {
             {
               icon: "hardware-chip-outline",
               label: "Gerenciar dispositivos",
-              onPress: () => {},
+              onPress: () => {
+                router.push("/(profile)/manageDevices");
+              },
             },
             {
               icon: "options-outline",
@@ -533,6 +569,11 @@ export default function Perfil() {
           Alert.alert("Sucesso", "Sua senha foi alterada.");
         }}
       />
+      <AddPetModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={handleSubmitPet}
+      />
     </>
   );
 }
@@ -561,5 +602,17 @@ const styles = StyleSheet.create({
     fontFamily: "Nunito-Bold",
     color: "#003C75",
     textAlign: "center",
+  },
+  addButton: {
+    backgroundColor: "#2E98FE",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+
+  addButtonText: {
+    color: "#fff",
+    fontFamily: "Nunito-SemiBold",
+    fontSize: 13,
   },
 });

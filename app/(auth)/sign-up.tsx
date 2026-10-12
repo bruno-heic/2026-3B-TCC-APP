@@ -1,3 +1,4 @@
+import { AddcollarModal } from "@/components/AddCollarForm";
 import { SucessSignUserModal } from "@/components/sucessSignUser";
 import { handleSignUser } from "@/lib/actions/user-actions";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,7 +30,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [idUserCreated, setIdUserCreated] = useState(0);
   const [modalVisivel, setModalVisivel] = useState(false);
-  const [addPetModalVisible, setAddPetModalVisible] = useState(false);
+  const [addDeviceVisible, setAddDeviceVisible] = useState(false);
 
   const router = useRouter();
 
@@ -86,10 +87,21 @@ export default function SignUp() {
       params: { idUsuario: idUserCreated },
     });
   };
-
-  const handleDoLater = () => {
+  const handleAddDevice = () => {
+    setAddDeviceVisible(false);
+    router.push({
+      pathname: "/(auth)/add-collar",
+      params: { idUsuario: idUserCreated },
+    });
+  };
+  const handleAddPetLater = () => {
     setModalVisivel(false);
-    router.replace("/(auth)/add-collar");
+    setAddDeviceVisible(true);
+  };
+
+  const handleAddDeviceLater = () => {
+    setAddDeviceVisible(false);
+    router.replace("/(tabs)/home");
   };
 
   return (
@@ -233,7 +245,12 @@ export default function SignUp() {
       <SucessSignUserModal
         visible={modalVisivel}
         onAddPet={handleAddPet}
-        onDoLater={handleDoLater}
+        onDoLater={handleAddPetLater}
+      />
+      <AddcollarModal
+        visible={addDeviceVisible}
+        onAddCollar={handleAddDevice}
+        onDoLater={handleAddDeviceLater}
       />
     </>
   );

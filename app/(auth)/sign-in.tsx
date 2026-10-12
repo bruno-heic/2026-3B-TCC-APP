@@ -1,7 +1,7 @@
 import { handleLoginUser } from "@/lib/actions/user-actions";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -106,7 +106,7 @@ export default function SignIn() {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
           >
-            <Text style={styles.buttonText}>Entrar</Text>
+            <Text style={styles.buttonText}> Entrar </Text>
           </TouchableOpacity>
         </SafeAreaView>
       </KeyboardAvoidingView>

@@ -23,6 +23,12 @@ export type SucessSignUserProps = {
   onDoLater: () => void;
 };
 
+export type AddDeviceProps = {
+  visible: boolean;
+  onAddCollar: () => void;
+  onDoLater: () => void;
+};
+
 export type SucessCreatePetProps = {
   visible: boolean;
   onAddDevice: () => void;
