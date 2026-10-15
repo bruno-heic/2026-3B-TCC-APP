@@ -173,7 +173,11 @@ export default function Home() {
                       </Text>
                     </View>
 
-                    <TouchableOpacity style={styles.bellButton}>
+                    <TouchableOpacity
+                      style={styles.bellButton}
+                      onPress={() => router.push("/notifications")}
+                      accessibilityLabel="Abrir notificações"
+                    >
                       <Ionicons
                         name="notifications"
                         color="#1F1F1F"

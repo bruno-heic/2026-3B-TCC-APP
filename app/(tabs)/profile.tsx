@@ -1,4 +1,5 @@
 import { AddPetModal } from "@/components/AddPetModal";
+import { AlertRuleModal } from "@/components/AlertRuleModal";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import {
@@ -47,6 +48,7 @@ type Usuario = {
 
 export default function Perfil() {
   const { userId, reload } = usePetsContext();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [pets, setPets] = useState<Pet[]>([]);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
@@ -56,6 +58,7 @@ export default function Perfil() {
   const [refreshing, setRefreshing] = useState(false);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [alertRuleModalVisible, setAlertRuleModalVisible] = useState(false);
   const [editingField, setEditingField] = useState<EditableField | null>(null);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
@@ -101,6 +104,7 @@ export default function Perfil() {
           return resultado.pets[0] ?? null;
         });
       }
+
       if (isInitial) {
         setLoading(false);
       } else {
@@ -141,13 +145,17 @@ export default function Perfil() {
     const resultado = await createPet({ idUsuario: userId, ...petData });
 
     if (!resultado.sucess) {
-      Alert.alert("Erro ao cadastrar pet", resultado.error);
+      Alert.alert(
+        "Erro ao cadastrar pet",
+        resultado.error || "Não foi possível cadastrar o pet.",
+      );
       return false;
     }
 
     setModalVisible(false);
     await reload();
     await carregarPets();
+
     return true;
   };
 
@@ -167,10 +175,7 @@ export default function Perfil() {
   ): Promise<boolean> => {
     console.log("handleSaveField:", field, novoValor);
 
-    // ========================================
-    // CAMPOS DO USUÁRIO
-    // ========================================
-
+    // Campos do usuário
     if (field === "nome_usuario") {
       const resultado = await updateUserField(field, novoValor);
 
@@ -180,16 +185,11 @@ export default function Perfil() {
       }
 
       await carregarUsuario();
-
       return true;
     }
 
     if (field === "email") {
-      console.log("Atualizando email:", novoValor);
-
       const resultado = await updateUserField("email", novoValor);
-
-      console.log("Resultado update email:", resultado);
 
       if (!resultado.sucess) {
         Alert.alert("Erro ao salvar", resultado.error);
@@ -215,10 +215,7 @@ export default function Perfil() {
       return true;
     }
 
-    // ========================================
-    // CAMPOS DO PET
-    // ========================================
-
+    // Campos do pet
     if (!selectedPet) {
       Alert.alert("Erro", "Nenhum pet selecionado.");
       return false;
@@ -246,7 +243,6 @@ export default function Perfil() {
     }
 
     await carregarPets();
-
     return true;
   };
 
@@ -393,15 +389,9 @@ export default function Perfil() {
         style={styles.container}
         contentContainerStyle={styles.content}
       >
-        <View
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <View style={styles.header}>
           <Text style={styles.title}>Perfil</Text>
+
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => setModalVisible(true)}
@@ -452,6 +442,11 @@ export default function Perfil() {
                 label: "Peso",
                 value: selectedPet.peso ? `${selectedPet.peso} kg` : undefined,
                 onPress: () => handleEditPetInfo("peso"),
+              },
+              {
+                icon: "notifications-outline",
+                label: "Editar alertas do pet",
+                onPress: () => setAlertRuleModalVisible(true),
               },
               {
                 icon: "trash-outline",
@@ -550,6 +545,14 @@ export default function Perfil() {
         onSave={handleSaveField}
       />
 
+      <AlertRuleModal
+        visible={alertRuleModalVisible && selectedPet !== null}
+        idPet={selectedPet?.id_pet ?? 0}
+        nomePet={selectedPet?.nome ?? ""}
+        onClose={() => setAlertRuleModalVisible(false)}
+        onSaved={() => setAlertRuleModalVisible(false)}
+      />
+
       <ConfirmModal
         visible={confirmAction !== null}
         title={confirmAction ? configModal[confirmAction].title : ""}
@@ -560,6 +563,7 @@ export default function Perfil() {
         onConfirm={executarAcaoConfirmada}
         onCancel={() => setConfirmAction(null)}
       />
+
       <ChangePasswordModal
         visible={changePasswordVisible}
         email={usuario?.email ?? ""}
@@ -569,6 +573,7 @@ export default function Perfil() {
           Alert.alert("Sucesso", "Sua senha foi alterada.");
         }}
       />
+
       <AddPetModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -590,6 +595,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
 
+  header: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
   center: {
     flex: 1,
     justifyContent: "center",
@@ -603,6 +615,7 @@ const styles = StyleSheet.create({
     color: "#003C75",
     textAlign: "center",
   },
+
   addButton: {
     backgroundColor: "#2E98FE",
     paddingHorizontal: 14,

@@ -24,9 +24,12 @@
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
-        "android.permission.BLUETOOTH_CONNECT"
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.bruno.guerra4.x20263BTCCAPP"
+      "package": "com.bruno.guerra4.x20263BTCCAPP",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -59,6 +62,7 @@
           "locationWhenInUsePermission": "Permita que o aplicativo use sua localização para cadastrar áreas seguras do seu pet."
         }
       ],
+      ["expo-notifications"],
       "expo-font",
       "expo-sqlite",
       "expo-image",
@@ -68,6 +72,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d034c0cf-584a-4901-9eb6-4742155c2e3e"
+      }
+    },
+    "owner": "bruno.guerra4"
   }
 }

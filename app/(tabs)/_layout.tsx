@@ -1,11 +1,36 @@
 import { PetsProvider } from "@/contexts/PetsContext";
+import { registrarPush } from "@/lib/actions/push-notifications";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useEffect } from "react";
 
 const ACTIVE_COLOR = "#2E98FE";
 const INACTIVE_COLOR = "#999999";
 
 export default function TabLayout() {
+  useEffect(() => {
+    let ativo = true;
+
+    async function configurarNotificacoes() {
+      try {
+        await registrarPush();
+      } catch (error) {
+        if (ativo) {
+          console.warn(
+            "[Push] Não foi possível registrar o dispositivo:",
+            error,
+          );
+        }
+      }
+    }
+
+    configurarNotificacoes();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
   return (
     <PetsProvider>
       <Tabs
@@ -19,7 +44,6 @@ export default function TabLayout() {
 
           tabBarStyle: {
             position: "absolute",
-
             height: 95,
             backgroundColor: "#FFFFFF",
             borderTopWidth: 0,
@@ -46,7 +70,6 @@ export default function TabLayout() {
           name="home"
           options={{
             title: "Início",
-
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="home" size={28} color={color} />
             ),
@@ -57,7 +80,6 @@ export default function TabLayout() {
           name="devices"
           options={{
             title: "Dispositivos",
-
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="devices" size={28} color={color} />
             ),
@@ -68,7 +90,6 @@ export default function TabLayout() {
           name="reports"
           options={{
             title: "Relatórios",
-
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="bar-chart" size={28} color={color} />
             ),
@@ -79,7 +100,6 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: "Perfil",
-
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="pets" size={28} color={color} />
             ),
