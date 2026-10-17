@@ -3,6 +3,7 @@ import { RequirePetsGate } from "@/components/RequirePetGate";
 import { usePetsContext } from "@/contexts/PetsContext";
 import { createPet, getUserPets } from "@/lib/actions/pet-actions";
 import { getUser } from "@/lib/actions/user-actions";
+import { supabase } from "@/lib/supabase";
 import { Pet, PetFormData } from "@/lib/types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -12,6 +13,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,54 +29,119 @@ type Usuario = {
   email: string;
 };
 
-// ============================================================
-// DADOS FICTÍCIOS — trocar depois pela busca real (ex: tabela
-// "leituras" da coleira/dispositivo IoT, atualizada em tempo real)
-// ============================================================
-const STATUS_FICTICIO = {
-  status: "Tudo normal",
-  localizacao: "Casa",
-  localizacaoAtualizadoEm: "Atualizado agora",
-  temperatura: "39,0°C",
-  temperaturaStatus: "Normal",
-  bateria: "80%",
-  bateriaStatus: "Bom",
-  alertaRecente: {
-    titulo: "Rápida troca de temperatura",
-    horario: "Hoje, 11h03",
-  },
+type StatusPetData = {
+  status: string;
+  localizacao: string;
+  localizacaoAtualizadoEm: string;
+  temperatura: string;
+  temperaturaStatus: string;
+  bateria: string;
+  bateriaStatus: string;
+  alertasRecentes: { id: number; titulo: string; horario: string }[];
 };
 
-// ============================================================
-// PONTO DE INTEGRAÇÃO FUTURA
-// ============================================================
-// type PetStatusData = {
-//   status: string;
-//   localizacao: string;
-//   localizacaoAtualizadoEm: string;
-//   temperatura: string;
-//   temperaturaStatus: string;
-//   bateria: string;
-//   bateriaStatus: string;
-//   alertaRecente: { titulo: string; horario: string } | null;
-// };
-//
-// async function fetchPetStatus(idPet: number): Promise<PetStatusData> {
-//   const { data, error } = await supabase
-//     .from("leituras")
-//     .select("*")
-//     .eq("id_pet", idPet)
-//     .order("created_at", { ascending: false })
-//     .limit(1)
-//     .single();
-//   ...
-//   return dadosProcessados;
-// }
-//
-// const handleLoadPetStatus = async (idPet: number) => {
-//   const status = await fetchPetStatus(idPet);
-//   setPetStatus(status);
-// };
+const STATUS_INICIAL: StatusPetData = {
+  status: "Consultando dispositivo...",
+  localizacao: "Sem dados",
+  localizacaoAtualizadoEm: "Localização não disponível",
+  temperatura: "—",
+  temperaturaStatus: "Sem leitura",
+  bateria: "—",
+  bateriaStatus: "Sem leitura",
+  alertasRecentes: [],
+};
+
+function formatarHorario(data: string) {
+  const dataAlerta = new Date(data);
+  if (Number.isNaN(dataAlerta.getTime())) return "Data indisponível";
+  return dataAlerta.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Seletor de pet (local da Home): só a seta + modal com a lista       */
+/* ------------------------------------------------------------------ */
+type PetSelectorProps = {
+  pets: Pet[];
+  selectedPet: Pet | null;
+  onSelectPet: (pet: Pet) => void;
+};
+
+function PetSelector({ pets, selectedPet, onSelectPet }: PetSelectorProps) {
+  const [aberto, setAberto] = useState(false);
+
+  // Com um pet só não há o que trocar
+  if (pets.length <= 1) return null;
+
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.switcherButton}
+        onPress={() => setAberto(true)}
+        accessibilityLabel="Trocar de pet"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="chevron-down" size={18} color="#2E98FE" />
+      </TouchableOpacity>
+
+      <Modal
+        visible={aberto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAberto(false)}
+      >
+        <Pressable
+          style={styles.switcherOverlay}
+          onPress={() => setAberto(false)}
+        >
+          <Pressable style={styles.switcherSheet} onPress={() => {}}>
+            <Text style={styles.switcherTitle}>Escolher pet</Text>
+
+            {pets.map((pet) => {
+              const ativo = pet.id_pet === selectedPet?.id_pet;
+              return (
+                <TouchableOpacity
+                  key={pet.id_pet}
+                  style={[
+                    styles.switcherItem,
+                    ativo && styles.switcherItemAtivo,
+                  ]}
+                  onPress={() => {
+                    onSelectPet(pet);
+                    setAberto(false);
+                  }}
+                >
+                  {pet.foto_url ? (
+                    <Image
+                      source={{ uri: pet.foto_url }}
+                      style={styles.switcherFoto}
+                    />
+                  ) : (
+                    <View
+                      style={[styles.switcherFoto, styles.petPhotoPlaceholder]}
+                    >
+                      <Ionicons name="paw" size={18} color="#999" />
+                    </View>
+                  )}
+
+                  <Text style={styles.switcherNome}>{pet.nome}</Text>
+
+                  {ativo && (
+                    <Ionicons name="checkmark" size={20} color="#2E98FE" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
 
 export default function Home() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -81,8 +149,12 @@ export default function Home() {
   const [loadingPets, setLoadingPets] = useState(true);
   const { userId, reload } = usePetsContext();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
-
+  const [statusPet, setStatusPet] = useState<StatusPetData>(STATUS_INICIAL);
+  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const router = useRouter();
+
+  // O pet ativo é o pet selecionado no seletor
+  const petAtivo = selectedPet ?? pets[0] ?? null;
 
   const carregarUsuario = useCallback(async () => {
     const resultado = await getUser();
@@ -102,6 +174,17 @@ export default function Home() {
 
     if (resultado.sucess) {
       setPets(resultado.pets);
+
+      // Mantém o pet selecionado se ele ainda existir; senão usa o primeiro
+      setSelectedPet((atual) => {
+        if (atual) {
+          const aindaExiste = resultado.pets.find(
+            (p) => p.id_pet === atual.id_pet,
+          );
+          if (aindaExiste) return aindaExiste;
+        }
+        return resultado.pets[0] ?? null;
+      });
     }
 
     setLoadingPets(false);
@@ -112,6 +195,102 @@ export default function Home() {
       carregarPets();
       carregarUsuario();
     }, [carregarUsuario, carregarPets]),
+  );
+
+  const carregarStatusPet = useCallback(async (idPet: number) => {
+    setStatusPet(STATUS_INICIAL);
+
+    const { data: dispositivo, error: erroDispositivo } = await supabase
+      .from("dispositivo")
+      .select("id_dispositivo")
+      .eq("id_pet", idPet)
+      .limit(1)
+      .maybeSingle();
+
+    if (erroDispositivo) {
+      console.error(
+        "[Home] Erro ao buscar dispositivo:",
+        erroDispositivo.message,
+      );
+      setStatusPet({
+        ...STATUS_INICIAL,
+        status: "Erro ao consultar dispositivo",
+      });
+      return;
+    }
+
+    if (!dispositivo) {
+      setStatusPet({ ...STATUS_INICIAL, status: "Sem dispositivo vinculado" });
+      return;
+    }
+
+    // Busca a última localização salva para o dispositivo vinculado ao pet.
+    const { data: localizacao, error: erroLocalizacao } = await supabase
+      .from("localizacao")
+      .select("latitude, longitude, data_hora")
+      .eq("id_dispositivo", dispositivo.id_dispositivo)
+      .order("data_hora", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (erroLocalizacao) {
+      console.error(
+        "[Home] Erro ao buscar localização:",
+        erroLocalizacao.message,
+      );
+    }
+
+    const textoLocalizacao = erroLocalizacao
+      ? "Erro ao consultar"
+      : localizacao
+        ? `${Number(localizacao.latitude).toFixed(5)}, ${Number(localizacao.longitude).toFixed(5)}`
+        : "Sem localização registrada";
+
+    const horarioLocalizacao = erroLocalizacao
+      ? "Verifique o console"
+      : localizacao
+        ? `Atualizado em ${formatarHorario(localizacao.data_hora)}`
+        : "Localização não disponível";
+
+    const { data: alertas, error: erroAlerta } = await supabase
+      .from("alerta")
+      .select("id_alerta, tipo, descricao, data_hora, status, nivel_urgencia")
+      .eq("id_dispositivo", dispositivo.id_dispositivo)
+      .order("data_hora", { ascending: false })
+      .limit(3);
+
+    if (erroAlerta) {
+      console.error("[Home] Erro ao buscar alertas:", erroAlerta.message);
+      setStatusPet({ ...STATUS_INICIAL, status: "Erro ao consultar alertas" });
+      return;
+    }
+
+    const ultimoAlerta = alertas?.[0];
+
+    setStatusPet({
+      ...STATUS_INICIAL,
+      localizacao: textoLocalizacao,
+      localizacaoAtualizadoEm: horarioLocalizacao,
+      status: ultimoAlerta
+        ? `Último alerta: ${ultimoAlerta.nivel_urgencia ?? "sem nível"}`
+        : "Sem alertas registrados",
+      alertasRecentes: (alertas ?? []).map((a) => ({
+        id: a.id_alerta,
+        titulo: a.descricao || a.tipo || "Alerta registrado",
+        horario: formatarHorario(a.data_hora),
+      })),
+    });
+  }, []);
+
+  // Recarrega o status sempre que o pet ativo mudar
+  useFocusEffect(
+    useCallback(() => {
+      if (petAtivo?.id_pet != null) {
+        carregarStatusPet(Number(petAtivo.id_pet));
+      } else {
+        setStatusPet(STATUS_INICIAL);
+      }
+    }, [petAtivo?.id_pet, carregarStatusPet]),
   );
 
   const handleSubmitPet = async (petData: PetFormData): Promise<boolean> => {
@@ -142,13 +321,11 @@ export default function Home() {
     );
   };
 
-  const petAtivo = pets[0] ?? null;
-
   return (
     <>
       <View style={styles.container}>
         <RequirePetsGate onAddPet={() => setModalVisible(true)}>
-          {loadingPets ? (
+          {loadingPets && pets.length === 0 ? (
             <ActivityIndicator
               size="large"
               color="#2E98FE"
@@ -167,9 +344,7 @@ export default function Home() {
                         Olá, {usuario?.nome ?? "..."}!
                       </Text>
                       <Text style={styles.subSaudacao}>
-                        {petAtivo
-                          ? `Tudo normal com a ${petAtivo.nome}`
-                          : "Nenhum pet cadastrado"}
+                        {`Tudo normal com a ${petAtivo.nome}`}
                       </Text>
                     </View>
 
@@ -186,6 +361,7 @@ export default function Home() {
                       <View style={styles.bellBadge} />
                     </TouchableOpacity>
                   </View>
+
                   {/* Card de status do pet */}
                   <View style={styles.card}>
                     <View style={styles.petRow}>
@@ -208,12 +384,25 @@ export default function Home() {
                       </View>
 
                       <View>
-                        <Text style={styles.petNome}>{petAtivo.nome}</Text>
+                        <View
+                          style={{
+                            display: "flex",
+                            flexDirection: "row",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text style={styles.petNome}>{petAtivo.nome}</Text>
+                          <PetSelector
+                            pets={pets}
+                            selectedPet={petAtivo}
+                            onSelectPet={setSelectedPet}
+                          />
+                        </View>
                         <Text style={styles.statusLabel}>Status</Text>
                         <View style={styles.statusRow}>
                           <View style={styles.statusDot} />
                           <Text style={styles.statusValue}>
-                            {STATUS_FICTICIO.status}
+                            {statusPet.status}
                           </Text>
                         </View>
                       </View>
@@ -235,10 +424,10 @@ export default function Home() {
                         <Text
                           style={[styles.metricValue, { color: "#2E98FE" }]}
                         >
-                          {STATUS_FICTICIO.localizacao}
+                          {statusPet.localizacao}
                         </Text>
                         <Text style={styles.metricSub}>
-                          {STATUS_FICTICIO.localizacaoAtualizadoEm}
+                          {statusPet.localizacaoAtualizadoEm}
                         </Text>
                       </View>
 
@@ -259,10 +448,10 @@ export default function Home() {
                         <Text
                           style={[styles.metricValue, { color: "#2ECC71" }]}
                         >
-                          {STATUS_FICTICIO.temperatura}
+                          {statusPet.temperatura}
                         </Text>
                         <Text style={styles.metricSub}>
-                          {STATUS_FICTICIO.temperaturaStatus}
+                          {statusPet.temperaturaStatus}
                         </Text>
                       </View>
 
@@ -283,16 +472,17 @@ export default function Home() {
                         <Text
                           style={[styles.metricValue, { color: "#F1C40F" }]}
                         >
-                          {STATUS_FICTICIO.bateria}
+                          {statusPet.bateria}
                         </Text>
                         <Text style={styles.metricSub}>
-                          {STATUS_FICTICIO.bateriaStatus}
+                          {statusPet.bateriaStatus}
                         </Text>
                       </View>
                     </View>
                   </View>
+
                   {/* Card de alertas recentes */}
-                  {STATUS_FICTICIO.alertaRecente && (
+                  {statusPet.alertasRecentes.length > 0 && (
                     <View style={styles.alertCard}>
                       <View style={styles.alertHeader}>
                         <View style={styles.alertIconCircle}>
@@ -301,14 +491,18 @@ export default function Home() {
                         <Text style={styles.alertTitle}>Alertas recentes</Text>
                       </View>
 
-                      <View style={styles.alertRow}>
-                        <Text style={styles.alertText}>
-                          {STATUS_FICTICIO.alertaRecente.titulo}
-                        </Text>
-                        <Text style={styles.alertTime}>
-                          {STATUS_FICTICIO.alertaRecente.horario}
-                        </Text>
-                      </View>
+                      {statusPet.alertasRecentes.map((alerta, index) => (
+                        <View
+                          key={alerta.id}
+                          style={[
+                            styles.alertRow,
+                            index > 0 && styles.alertRowSeparador,
+                          ]}
+                        >
+                          <Text style={styles.alertText}>{alerta.titulo}</Text>
+                          <Text style={styles.alertTime}>{alerta.horario}</Text>
+                        </View>
+                      ))}
                     </View>
                   )}
                 </>
@@ -542,5 +736,68 @@ const styles = StyleSheet.create({
     fontFamily: "Nunito-Regular",
     color: "#9DB8D6",
     marginLeft: 10,
+  },
+  alertRowSeparador: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.15)",
+  },
+  /* ---- Seletor de pet ---- */
+  switcherButton: {
+    marginLeft: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#DCEEFB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  switcherOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    paddingHorizontal: 30,
+  },
+
+  switcherSheet: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 18,
+    gap: 6,
+  },
+
+  switcherTitle: {
+    fontSize: 16,
+    fontFamily: "Nunito-Bold",
+    color: "#003C75",
+    marginBottom: 8,
+  },
+
+  switcherItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+  },
+
+  switcherItemAtivo: {
+    backgroundColor: "#F0F7FF",
+  },
+
+  switcherFoto: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+
+  switcherNome: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Nunito-Bold",
+    color: "#000",
   },
 });
