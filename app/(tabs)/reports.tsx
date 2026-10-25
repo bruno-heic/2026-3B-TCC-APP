@@ -31,9 +31,15 @@ type AlertaRow = {
   nivel_urgencia: string;
 };
 
+type TemperaturaRow = {
+  temperatura: number | string;
+  data_hora: string;
+};
+
 type ReportsData = {
   locaisVisitados: number;
   temperaturaMedia: string;
+  leiturasTemperatura: number;
   alertas: number;
   ultimaLocalizacao: string;
   alertasPorDia: { value: number; label: string; frontColor?: string }[];
@@ -44,6 +50,7 @@ type ReportsData = {
 const DADOS_VAZIOS: ReportsData = {
   locaisVisitados: 0,
   temperaturaMedia: "—",
+  leiturasTemperatura: 0,
   alertas: 0,
   ultimaLocalizacao: "Sem dados",
   alertasPorDia: [],
@@ -52,8 +59,9 @@ const DADOS_VAZIOS: ReportsData = {
 };
 
 const PONTO_ESPACAMENTO = 26;
-const TAMANHO_PAGINA = 1000; // limite padrão de linhas por consulta do Supabase
-const MAX_PAGINAS = 20; // teto de segurança: 20.000 registros por consulta
+const TAMANHO_PAGINA = 1000;
+const MAX_PAGINAS = 20;
+
 const MESES = [
   "jan",
   "fev",
@@ -69,14 +77,10 @@ const MESES = [
   "dez",
 ];
 
-/* ------------------------------------------------------------------ */
-/* Datas e agrupamento                                                 */
-/* ------------------------------------------------------------------ */
 function inicioDoPeriodo(periodo: Periodo): Date {
   const inicio = new Date();
 
   if (periodo === "hoje") {
-    // Últimas 24 horas, para bater com o gráfico por hora
     inicio.setHours(inicio.getHours() - 23, 0, 0, 0);
     return inicio;
   }
@@ -98,7 +102,11 @@ function inicioDoPeriodo(periodo: Periodo): Date {
 }
 
 function formatarData(data: string) {
-  return new Date(data).toLocaleString("pt-BR", {
+  const d = new Date(data);
+
+  if (Number.isNaN(d.getTime())) return "Data indisponível";
+
+  return d.toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -106,21 +114,24 @@ function formatarData(data: string) {
   });
 }
 
-// Tempo relativo: "há 5 min", "há 2 h", "há 3 d"
 function formatarHa(data: string) {
   const minutos = Math.max(
     0,
     Math.floor((Date.now() - new Date(data).getTime()) / 60000),
   );
+
   if (minutos < 1) return "Agora";
   if (minutos < 60) return `há ${minutos} min`;
+
   const horas = Math.floor(minutos / 60);
   if (horas < 24) return `há ${horas} horas`;
+
   return `há ${Math.floor(horas / 24)} dias`;
 }
 
 function chaveDia(data: string | Date) {
   const d = new Date(data);
+
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -128,7 +139,6 @@ function chaveMes(d: Date) {
   return `${d.getFullYear()}-${d.getMonth() + 1}`;
 }
 
-// Monta os "baldes" do gráfico de acordo com o período escolhido
 function criarBuckets(periodo: Periodo) {
   const agora = new Date();
 
@@ -136,6 +146,7 @@ function criarBuckets(periodo: Periodo) {
     return Array.from({ length: 24 }, (_, i) => {
       const d = new Date(agora);
       d.setHours(agora.getHours() - (23 - i), 0, 0, 0);
+
       return {
         chave: `${chaveDia(d)}-${d.getHours()}`,
         label: `${String(d.getHours()).padStart(2, "0")}h`,
@@ -148,6 +159,7 @@ function criarBuckets(periodo: Periodo) {
       const d = new Date(agora);
       d.setHours(0, 0, 0, 0);
       d.setDate(d.getDate() - (6 - i));
+
       return {
         chave: chaveDia(d),
         label: `${d.getDate()}/${d.getMonth() + 1}`,
@@ -156,38 +168,43 @@ function criarBuckets(periodo: Periodo) {
   }
 
   if (periodo === "mes") {
-    // Do dia 1 até hoje
     return Array.from({ length: agora.getDate() }, (_, i) => {
       const d = new Date(agora.getFullYear(), agora.getMonth(), i + 1);
-      return { chave: chaveDia(d), label: String(d.getDate()) };
+
+      return {
+        chave: chaveDia(d),
+        label: String(d.getDate()),
+      };
     });
   }
 
-  // ano: de janeiro até o mês atual
   return Array.from({ length: agora.getMonth() + 1 }, (_, i) => {
     const d = new Date(agora.getFullYear(), i, 1);
-    return { chave: chaveMes(d), label: MESES[i] };
+
+    return {
+      chave: chaveMes(d),
+      label: MESES[i],
+    };
   });
 }
 
 function chaveAgrupamento(data: string, periodo: Periodo) {
   const d = new Date(data);
+
   if (periodo === "hoje") return `${chaveDia(d)}-${d.getHours()}`;
   if (periodo === "ano") return chaveMes(d);
+
   return chaveDia(d);
 }
 
-/* ------------------------------------------------------------------ */
-/* Consultas                                                           */
-/* ------------------------------------------------------------------ */
+/* Consultas paginadas */
 
-// Busca todas as localizações do período em páginas, para não esbarrar
-// no limite de 1000 linhas do Supabase (a coleira envia a cada 30 s).
 async function buscarLocalizacoes(ids: number[], inicio: Date) {
   const todas: { data_hora: string }[] = [];
 
   for (let pagina = 0; pagina < MAX_PAGINAS; pagina++) {
     const de = pagina * TAMANHO_PAGINA;
+
     const { data, error } = await supabase
       .from("localizacao")
       .select("data_hora")
@@ -199,13 +216,40 @@ async function buscarLocalizacoes(ids: number[], inicio: Date) {
     if (error) throw error;
 
     todas.push(...(data ?? []));
+
     if (!data || data.length < TAMANHO_PAGINA) break;
   }
 
   return todas;
 }
 
-// Só a localização mais recente do pet (não depende do período escolhido)
+async function buscarTemperaturas(
+  ids: number[],
+  inicio: Date,
+): Promise<TemperaturaRow[]> {
+  const todas: TemperaturaRow[] = [];
+
+  for (let pagina = 0; pagina < MAX_PAGINAS; pagina++) {
+    const de = pagina * TAMANHO_PAGINA;
+
+    const { data, error } = await supabase
+      .from("leitura_temperatura")
+      .select("temperatura, data_hora")
+      .in("id_dispositivo", ids)
+      .gte("data_hora", inicio.toISOString())
+      .order("data_hora", { ascending: true })
+      .range(de, de + TAMANHO_PAGINA - 1);
+
+    if (error) throw error;
+
+    todas.push(...(data ?? []));
+
+    if (!data || data.length < TAMANHO_PAGINA) break;
+  }
+
+  return todas;
+}
+
 async function buscarUltimaLocalizacao(ids: number[]) {
   const { data, error } = await supabase
     .from("localizacao")
@@ -216,12 +260,12 @@ async function buscarUltimaLocalizacao(ids: number[]) {
     .maybeSingle();
 
   if (error) throw error;
+
   return data?.data_hora ?? null;
 }
 
-/* ------------------------------------------------------------------ */
-/* Seletor de pet (local da tela)                                      */
-/* ------------------------------------------------------------------ */
+/* Seletor de pet */
+
 type PetSelectorProps = {
   pets: Pet[];
   selectedPet: Pet | null;
@@ -250,6 +294,7 @@ function PetSelector({ pets, selectedPet, onSelectPet }: PetSelectorProps) {
             <Ionicons name="paw" size={12} color="#999" />
           </View>
         )}
+
         <Text style={styles.switcherPillNome}>{selectedPet.nome}</Text>
         <Ionicons name="chevron-down" size={16} color="#2E98FE" />
       </TouchableOpacity>
@@ -269,6 +314,7 @@ function PetSelector({ pets, selectedPet, onSelectPet }: PetSelectorProps) {
 
             {pets.map((pet) => {
               const ativo = pet.id_pet === selectedPet.id_pet;
+
               return (
                 <TouchableOpacity
                   key={pet.id_pet}
@@ -307,9 +353,8 @@ function PetSelector({ pets, selectedPet, onSelectPet }: PetSelectorProps) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Tela                                                                */
-/* ------------------------------------------------------------------ */
+/* Tela de relatórios */
+
 export default function Reports() {
   const [periodo, setPeriodo] = useState<Periodo>("semana");
   const [dados, setDados] = useState<ReportsData | null>(null);
@@ -318,15 +363,16 @@ export default function Reports() {
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const { userId } = usePetsContext();
 
-  // Evita que uma resposta antiga sobrescreva a de um pet/período mais novo
   const requisicaoAtual = useRef(0);
 
   const petAtivo = selectedPet ?? pets[0] ?? null;
   const idPetAtivo = petAtivo ? Number(petAtivo.id_pet) : null;
 
-  // Carrega os pets do usuário (mesma função da Home)
   const carregarPets = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
     const resultado = await getUserPets(userId);
 
@@ -338,8 +384,10 @@ export default function Reports() {
           const aindaExiste = resultado.pets.find(
             (p) => p.id_pet === atual.id_pet,
           );
+
           if (aindaExiste) return aindaExiste;
         }
+
         return resultado.pets[0] ?? null;
       });
 
@@ -347,6 +395,9 @@ export default function Reports() {
         setDados(DADOS_VAZIOS);
         setLoading(false);
       }
+    } else {
+      setLoading(false);
+      Alert.alert("Erro", resultado.error);
     }
   }, [userId]);
 
@@ -360,7 +411,6 @@ export default function Reports() {
       setLoading(true);
 
       try {
-        // Só os dispositivos do pet selecionado
         const { data: dispositivos, error: erroDispositivos } = await supabase
           .from("dispositivo")
           .select("id_dispositivo")
@@ -373,32 +423,53 @@ export default function Reports() {
         );
 
         if (idsDispositivos.length === 0) {
-          if (requisicao === requisicaoAtual.current) setDados(DADOS_VAZIOS);
+          if (requisicao === requisicaoAtual.current) {
+            setDados(DADOS_VAZIOS);
+          }
           return;
         }
 
         const inicio = inicioDoPeriodo(novoPeriodo);
 
-        const [resultadoAlertas, localizacoes, ultimaLocalizacao] =
-          await Promise.all([
-            supabase
-              .from("alerta")
-              .select(
-                "id_alerta, id_dispositivo, tipo, descricao, data_hora, status, nivel_urgencia",
-              )
-              .in("id_dispositivo", idsDispositivos)
-              .gte("data_hora", inicio.toISOString())
-              .order("data_hora", { ascending: false }),
-            buscarLocalizacoes(idsDispositivos, inicio),
-            buscarUltimaLocalizacao(idsDispositivos),
-          ]);
+        const [
+          resultadoAlertas,
+          localizacoes,
+          ultimaLocalizacao,
+          temperaturas,
+        ] = await Promise.all([
+          supabase
+            .from("alerta")
+            .select(
+              "id_alerta, id_dispositivo, tipo, descricao, data_hora, status, nivel_urgencia",
+            )
+            .in("id_dispositivo", idsDispositivos)
+            .gte("data_hora", inicio.toISOString())
+            .order("data_hora", { ascending: false }),
+
+          buscarLocalizacoes(idsDispositivos, inicio),
+
+          buscarUltimaLocalizacao(idsDispositivos),
+
+          buscarTemperaturas(idsDispositivos, inicio),
+        ]);
 
         if (resultadoAlertas.error) throw resultadoAlertas.error;
 
-        // Resposta de uma consulta antiga: descarta
         if (requisicao !== requisicaoAtual.current) return;
 
         const alertas = (resultadoAlertas.data ?? []) as AlertaRow[];
+
+        const temperaturasValidas = temperaturas
+          .map((leitura) => Number(leitura.temperatura))
+          .filter((valor) => Number.isFinite(valor));
+
+        const temperaturaMedia =
+          temperaturasValidas.length > 0
+            ? `${(
+                temperaturasValidas.reduce((soma, valor) => soma + valor, 0) /
+                temperaturasValidas.length
+              ).toFixed(1)} °C`
+            : "—";
 
         const buckets = criarBuckets(novoPeriodo);
         const contagemAlertas = new Map<string, number>();
@@ -406,11 +477,13 @@ export default function Reports() {
 
         for (const alerta of alertas) {
           const chave = chaveAgrupamento(alerta.data_hora, novoPeriodo);
+
           contagemAlertas.set(chave, (contagemAlertas.get(chave) ?? 0) + 1);
         }
 
         for (const localizacao of localizacoes) {
           const chave = chaveAgrupamento(localizacao.data_hora, novoPeriodo);
+
           contagemLocalizacoes.set(
             chave,
             (contagemLocalizacoes.get(chave) ?? 0) + 1,
@@ -430,8 +503,8 @@ export default function Reports() {
 
         setDados({
           locaisVisitados: localizacoes.length,
-          // A tabela localizacao não armazena temperatura; não mostrar dado fictício.
-          temperaturaMedia: "—",
+          temperaturaMedia,
+          leiturasTemperatura: temperaturasValidas.length,
           alertas: alertas.length,
           ultimaLocalizacao: ultimaLocalizacao
             ? formatarHa(ultimaLocalizacao)
@@ -442,27 +515,38 @@ export default function Reports() {
         });
       } catch (error) {
         if (requisicao !== requisicaoAtual.current) return;
+
         console.error("Erro ao carregar relatórios:", error);
         setDados(null);
+
         Alert.alert(
           "Erro",
-          "Não foi possível carregar os relatórios do Supabase.",
+          "Não foi possível carregar os relatórios do Supabase. Verifique o console.",
         );
       } finally {
-        if (requisicao === requisicaoAtual.current) setLoading(false);
+        if (requisicao === requisicaoAtual.current) {
+          setLoading(false);
+        }
       }
     },
     [],
   );
 
-  // Recarrega ao trocar de pet ou de período
   useEffect(() => {
-    if (idPetAtivo != null) void carregarRelatorios(periodo, idPetAtivo);
-  }, [idPetAtivo, periodo, carregarRelatorios]);
+    if (idPetAtivo != null) {
+      void carregarRelatorios(periodo, idPetAtivo);
+    } else if (pets.length === 0) {
+      setDados(DADOS_VAZIOS);
+      setLoading(false);
+    }
+  }, [idPetAtivo, periodo, carregarRelatorios, pets.length]);
 
-  const atualizar = () => {
-    void carregarPets();
-    if (idPetAtivo != null) void carregarRelatorios(periodo, idPetAtivo);
+  const atualizar = async () => {
+    await carregarPets();
+
+    if (idPetAtivo != null) {
+      void carregarRelatorios(periodo, idPetAtivo);
+    }
   };
 
   return (
@@ -485,7 +569,6 @@ export default function Reports() {
           </Text>
         </View>
 
-        {/* Seletor de pet: só aparece com mais de um pet */}
         <View style={styles.switcherLinha}>
           <PetSelector
             pets={pets}
@@ -514,6 +597,7 @@ export default function Reports() {
                 backgroundColor="#E3F1FF"
                 iconColor="#2E98FE"
               />
+
               <ReportStatCard
                 icon="thermometer-outline"
                 label="Temperatura média"
@@ -523,6 +607,12 @@ export default function Reports() {
               />
             </View>
 
+            <Text style={styles.legendaTemperatura}>
+              {dados.leiturasTemperatura > 0
+                ? `${dados.leiturasTemperatura} leituras no período selecionado`
+                : "Nenhuma leitura de temperatura no período selecionado"}
+            </Text>
+
             <View style={styles.statsGrid}>
               <ReportStatCard
                 icon="shield-outline"
@@ -531,6 +621,7 @@ export default function Reports() {
                 backgroundColor="#FDE6E6"
                 iconColor="#E74C3C"
               />
+
               <ReportStatCard
                 icon="time-outline"
                 label="Última localização"
@@ -542,6 +633,7 @@ export default function Reports() {
 
             <View style={styles.chartCard}>
               <Text style={styles.chartTitle}>Localizações por período</Text>
+
               {dados.locaisVisitados > 0 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <LineChart
@@ -573,6 +665,7 @@ export default function Reports() {
 
             <View style={styles.chartCard}>
               <Text style={styles.chartTitle}>Alertas por período</Text>
+
               {dados.alertas > 0 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <BarChart
@@ -598,6 +691,7 @@ export default function Reports() {
 
             <View style={styles.chartCard}>
               <Text style={styles.chartTitle}>Alertas recentes</Text>
+
               {dados.alertasRecentes.length === 0 ? (
                 <Text style={styles.vazio}>Nenhum alerta encontrado.</Text>
               ) : (
@@ -606,10 +700,12 @@ export default function Reports() {
                     <View style={styles.alertaIcone}>
                       <Text style={styles.alertaIconeTexto}>!</Text>
                     </View>
+
                     <View style={styles.alertaTexto}>
                       <Text style={styles.alertaTitulo}>
                         {alerta.descricao || alerta.tipo || "Alerta da coleira"}
                       </Text>
+
                       <Text style={styles.alertaDetalhe}>
                         {formatarData(alerta.data_hora)} ·{" "}
                         {alerta.nivel_urgencia} · {alerta.status}
@@ -639,9 +735,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  title: { fontSize: 28, fontFamily: "Nunito-Bold", color: "#000" },
-  atualizar: { fontSize: 14, fontFamily: "Nunito-SemiBold", color: "#2E98FE" },
-  statsGrid: { flexDirection: "row", gap: 12 },
+  title: {
+    fontSize: 28,
+    fontFamily: "Nunito-Bold",
+    color: "#000",
+  },
+  atualizar: {
+    fontSize: 14,
+    fontFamily: "Nunito-SemiBold",
+    color: "#2E98FE",
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  legendaTemperatura: {
+    fontSize: 11,
+    fontFamily: "Nunito-Regular",
+    color: "#888",
+    marginTop: -8,
+    marginLeft: 4,
+  },
   chartCard: {
     backgroundColor: "#fff",
     borderRadius: 24,
@@ -659,8 +773,16 @@ const styles = StyleSheet.create({
     color: "#000",
     marginBottom: 16,
   },
-  axisText: { fontSize: 9, fontFamily: "Nunito-Regular", color: "#999" },
-  axisTextSmall: { fontSize: 8, fontFamily: "Nunito-Regular", color: "#999" },
+  axisText: {
+    fontSize: 9,
+    fontFamily: "Nunito-Regular",
+    color: "#999",
+  },
+  axisTextSmall: {
+    fontSize: 8,
+    fontFamily: "Nunito-Regular",
+    color: "#999",
+  },
   vazio: {
     fontSize: 13,
     fontFamily: "Nunito-Regular",
@@ -689,15 +811,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   alertaTexto: { flex: 1 },
-  alertaTitulo: { fontSize: 14, fontFamily: "Nunito-SemiBold", color: "#111" },
+  alertaTitulo: {
+    fontSize: 14,
+    fontFamily: "Nunito-SemiBold",
+    color: "#111",
+  },
   alertaDetalhe: {
     fontSize: 11,
     fontFamily: "Nunito-Regular",
     color: "#777",
     marginTop: 4,
   },
-
-  /* ---- Seletor de pet ---- */
   switcherLinha: {
     flexDirection: "row",
     alignItems: "center",

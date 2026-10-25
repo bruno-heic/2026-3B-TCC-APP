@@ -8,7 +8,6 @@ import { Pet, PetFormData } from "@/lib/types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-
 import {
   ActivityIndicator,
   Alert,
@@ -52,9 +51,10 @@ const STATUS_INICIAL: StatusPetData = {
 };
 
 function formatarHorario(data: string) {
-  const dataAlerta = new Date(data);
-  if (Number.isNaN(dataAlerta.getTime())) return "Data indisponível";
-  return dataAlerta.toLocaleString("pt-BR", {
+  const d = new Date(data);
+  if (Number.isNaN(d.getTime())) return "Data indisponível";
+
+  return d.toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -62,9 +62,6 @@ function formatarHorario(data: string) {
   });
 }
 
-/* ------------------------------------------------------------------ */
-/* Seletor de pet (local da Home): só a seta + modal com a lista       */
-/* ------------------------------------------------------------------ */
 type PetSelectorProps = {
   pets: Pet[];
   selectedPet: Pet | null;
@@ -74,7 +71,6 @@ type PetSelectorProps = {
 function PetSelector({ pets, selectedPet, onSelectPet }: PetSelectorProps) {
   const [aberto, setAberto] = useState(false);
 
-  // Com um pet só não há o que trocar
   if (pets.length <= 1) return null;
 
   return (
@@ -103,6 +99,7 @@ function PetSelector({ pets, selectedPet, onSelectPet }: PetSelectorProps) {
 
             {pets.map((pet) => {
               const ativo = pet.id_pet === selectedPet?.id_pet;
+
               return (
                 <TouchableOpacity
                   key={pet.id_pet}
@@ -153,7 +150,6 @@ export default function Home() {
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const router = useRouter();
 
-  // O pet ativo é o pet selecionado no seletor
   const petAtivo = selectedPet ?? pets[0] ?? null;
 
   const carregarUsuario = useCallback(async () => {
@@ -167,15 +163,18 @@ export default function Home() {
   }, []);
 
   const carregarPets = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoadingPets(false);
+      return;
+    }
 
     setLoadingPets(true);
+
     const resultado = await getUserPets(userId);
 
     if (resultado.sucess) {
       setPets(resultado.pets);
 
-      // Mantém o pet selecionado se ele ainda existir; senão usa o primeiro
       setSelectedPet((atual) => {
         if (atual) {
           const aindaExiste = resultado.pets.find(
@@ -183,8 +182,11 @@ export default function Home() {
           );
           if (aindaExiste) return aindaExiste;
         }
+
         return resultado.pets[0] ?? null;
       });
+    } else {
+      Alert.alert("Erro", resultado.error);
     }
 
     setLoadingPets(false);
@@ -192,8 +194,8 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      carregarPets();
-      carregarUsuario();
+      void carregarPets();
+      void carregarUsuario();
     }, [carregarUsuario, carregarPets]),
   );
 
@@ -220,61 +222,109 @@ export default function Home() {
     }
 
     if (!dispositivo) {
-      setStatusPet({ ...STATUS_INICIAL, status: "Sem dispositivo vinculado" });
+      setStatusPet({
+        ...STATUS_INICIAL,
+        status: "Sem dispositivo vinculado",
+      });
       return;
     }
 
-    // Busca a última localização salva para o dispositivo vinculado ao pet.
-    const { data: localizacao, error: erroLocalizacao } = await supabase
-      .from("localizacao")
-      .select("latitude, longitude, data_hora")
-      .eq("id_dispositivo", dispositivo.id_dispositivo)
-      .order("data_hora", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const idDispositivo = dispositivo.id_dispositivo;
 
-    if (erroLocalizacao) {
+    const [resultadoLocalizacao, resultadoTemperatura, resultadoAlertas] =
+      await Promise.all([
+        supabase
+          .from("localizacao")
+          .select("latitude, longitude, data_hora")
+          .eq("id_dispositivo", idDispositivo)
+          .order("data_hora", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+
+        supabase
+          .from("leitura_temperatura")
+          .select("temperatura, data_hora")
+          .eq("id_dispositivo", idDispositivo)
+          .order("data_hora", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+
+        supabase
+          .from("alerta")
+          .select(
+            "id_alerta, tipo, descricao, data_hora, status, nivel_urgencia",
+          )
+          .eq("id_dispositivo", idDispositivo)
+          .order("data_hora", { ascending: false })
+          .limit(3),
+      ]);
+
+    if (resultadoLocalizacao.error) {
       console.error(
         "[Home] Erro ao buscar localização:",
-        erroLocalizacao.message,
+        resultadoLocalizacao.error.message,
       );
     }
 
-    const textoLocalizacao = erroLocalizacao
+    if (resultadoTemperatura.error) {
+      console.error(
+        "[Home] Erro ao buscar temperatura:",
+        resultadoTemperatura.error.message,
+      );
+    }
+
+    if (resultadoAlertas.error) {
+      console.error(
+        "[Home] Erro ao buscar alertas:",
+        resultadoAlertas.error.message,
+      );
+
+      setStatusPet({
+        ...STATUS_INICIAL,
+        status: "Erro ao consultar alertas",
+      });
+      return;
+    }
+
+    const localizacao = resultadoLocalizacao.data;
+    const temperatura = resultadoTemperatura.data;
+    const alertas = resultadoAlertas.data ?? [];
+    const ultimoAlerta = alertas[0];
+
+    const textoLocalizacao = resultadoLocalizacao.error
       ? "Erro ao consultar"
       : localizacao
         ? `${Number(localizacao.latitude).toFixed(5)}, ${Number(localizacao.longitude).toFixed(5)}`
         : "Sem localização registrada";
 
-    const horarioLocalizacao = erroLocalizacao
+    const horarioLocalizacao = resultadoLocalizacao.error
       ? "Verifique o console"
       : localizacao
         ? `Atualizado em ${formatarHorario(localizacao.data_hora)}`
         : "Localização não disponível";
 
-    const { data: alertas, error: erroAlerta } = await supabase
-      .from("alerta")
-      .select("id_alerta, tipo, descricao, data_hora, status, nivel_urgencia")
-      .eq("id_dispositivo", dispositivo.id_dispositivo)
-      .order("data_hora", { ascending: false })
-      .limit(3);
+    const textoTemperatura = resultadoTemperatura.error
+      ? "Erro ao consultar"
+      : temperatura && temperatura.temperatura != null
+        ? `${Number(temperatura.temperatura).toFixed(1)} °C`
+        : "—";
 
-    if (erroAlerta) {
-      console.error("[Home] Erro ao buscar alertas:", erroAlerta.message);
-      setStatusPet({ ...STATUS_INICIAL, status: "Erro ao consultar alertas" });
-      return;
-    }
-
-    const ultimoAlerta = alertas?.[0];
+    const horarioTemperatura = resultadoTemperatura.error
+      ? "Verifique o console"
+      : temperatura
+        ? `Atualizado em ${formatarHorario(temperatura.data_hora)}`
+        : "Sem leitura registrada";
 
     setStatusPet({
       ...STATUS_INICIAL,
       localizacao: textoLocalizacao,
       localizacaoAtualizadoEm: horarioLocalizacao,
+      temperatura: textoTemperatura,
+      temperaturaStatus: horarioTemperatura,
       status: ultimoAlerta
         ? `Último alerta: ${ultimoAlerta.nivel_urgencia ?? "sem nível"}`
         : "Sem alertas registrados",
-      alertasRecentes: (alertas ?? []).map((a) => ({
+      alertasRecentes: alertas.map((a) => ({
         id: a.id_alerta,
         titulo: a.descricao || a.tipo || "Alerta registrado",
         horario: formatarHorario(a.data_hora),
@@ -282,11 +332,10 @@ export default function Home() {
     });
   }, []);
 
-  // Recarrega o status sempre que o pet ativo mudar
   useFocusEffect(
     useCallback(() => {
       if (petAtivo?.id_pet != null) {
-        carregarStatusPet(Number(petAtivo.id_pet));
+        void carregarStatusPet(Number(petAtivo.id_pet));
       } else {
         setStatusPet(STATUS_INICIAL);
       }
@@ -312,15 +361,6 @@ export default function Home() {
     return true;
   };
 
-  const handleVerCamera = () => {
-    // Quando a integração de câmera/streaming estiver pronta:
-    // router.push({ pathname: "/camera-ao-vivo", params: { idPet: petAtivo.id_pet } });
-    Alert.alert(
-      "Em breve",
-      "A visualização da câmera ao vivo ainda não está disponível.",
-    );
-  };
-
   return (
     <>
       <View style={styles.container}>
@@ -344,7 +384,7 @@ export default function Home() {
                         Olá, {usuario?.nome ?? "..."}!
                       </Text>
                       <Text style={styles.subSaudacao}>
-                        {`Tudo normal com ${petAtivo.nome}`}
+                        Tudo normal com {petAtivo.nome}
                       </Text>
                     </View>
 
@@ -362,7 +402,6 @@ export default function Home() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Card de status do pet */}
                   <View style={styles.card}>
                     <View style={styles.petRow}>
                       <View style={styles.petPhotoRing}>
@@ -383,14 +422,8 @@ export default function Home() {
                         )}
                       </View>
 
-                      <View>
-                        <View
-                          style={{
-                            display: "flex",
-                            flexDirection: "row",
-                            alignItems: "center",
-                          }}
-                        >
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.petNomeLinha}>
                           <Text style={styles.petNome}>{petAtivo.nome}</Text>
                           <PetSelector
                             pets={pets}
@@ -398,6 +431,7 @@ export default function Home() {
                             onSelectPet={setSelectedPet}
                           />
                         </View>
+
                         <Text style={styles.statusLabel}>Status</Text>
                         <View style={styles.statusRow}>
                           <View style={styles.statusDot} />
@@ -441,12 +475,12 @@ export default function Home() {
                           <Ionicons
                             name="thermometer"
                             size={18}
-                            color="#2ECC71"
+                            color="#239B56"
                           />
                         </View>
                         <Text style={styles.metricLabel}>Temperatura</Text>
                         <Text
-                          style={[styles.metricValue, { color: "#2ECC71" }]}
+                          style={[styles.metricValue, { color: "#239B56" }]}
                         >
                           {statusPet.temperatura}
                         </Text>
@@ -481,7 +515,6 @@ export default function Home() {
                     </View>
                   </View>
 
-                  {/* Card de alertas recentes */}
                   {statusPet.alertasRecentes.length > 0 && (
                     <View style={styles.alertCard}>
                       <View style={styles.alertHeader}>
@@ -522,11 +555,13 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
+  container: { flex: 1, backgroundColor: "#fff" },
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+    paddingTop: 10,
+    gap: 16,
   },
-
   header: {
     paddingTop: 75,
     paddingBottom: 10,
@@ -534,20 +569,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
   },
-
-  saudacao: {
-    color: "#003C75",
-    fontFamily: "Nunito-Bold",
-    fontSize: 24,
-  },
-
+  saudacao: { color: "#003C75", fontFamily: "Nunito-Bold", fontSize: 24 },
   subSaudacao: {
     color: "#999",
     fontFamily: "Nunito-Regular",
     fontSize: 14,
     marginTop: 2,
   },
-
   bellButton: {
     width: 40,
     height: 40,
@@ -556,7 +584,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   bellBadge: {
     position: "absolute",
     top: 8,
@@ -566,14 +593,6 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
     backgroundColor: "#E74C3C",
   },
-
-  content: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-    paddingTop: 10,
-    gap: 16,
-  },
-
   card: {
     backgroundColor: "#fff",
     borderRadius: 22,
@@ -584,13 +603,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
-
-  petRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-
+  petRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   petPhotoRing: {
     width: 72,
     height: 72,
@@ -600,68 +613,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  petPhoto: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-  },
-
+  petPhoto: { width: 62, height: 62, borderRadius: 31 },
   petPhotoPlaceholder: {
     backgroundColor: "#F0F0F0",
     alignItems: "center",
     justifyContent: "center",
   },
-
-  petNome: {
-    fontSize: 18,
-    fontFamily: "Nunito-Bold",
-    color: "#000",
-  },
-
+  petNomeLinha: { flexDirection: "row", alignItems: "center" },
+  petNome: { fontSize: 18, fontFamily: "Nunito-Bold", color: "#000" },
   statusLabel: {
     fontSize: 12,
     fontFamily: "Nunito-Regular",
     color: "#999",
     marginTop: 2,
   },
-
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 3,
     gap: 6,
   },
-
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: "#2ECC71",
   },
-
-  statusValue: {
-    fontSize: 14,
-    fontFamily: "Nunito-Bold",
-    color: "#2ECC71",
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#F0F0F0",
-    marginVertical: 16,
-  },
-
-  metricsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  metric: {
-    alignItems: "center",
-    flex: 1,
-  },
-
+  statusValue: { fontSize: 14, fontFamily: "Nunito-Bold", color: "#2ECC71" },
+  divider: { height: 1, backgroundColor: "#F0F0F0", marginVertical: 16 },
+  metricsRow: { flexDirection: "row", justifyContent: "space-between" },
+  metric: { alignItems: "center", flex: 1, paddingHorizontal: 2 },
   metricIcon: {
     width: 40,
     height: 40,
@@ -670,39 +651,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
   },
-
-  metricLabel: {
-    fontSize: 12,
-    fontFamily: "Nunito-Regular",
-    color: "#999",
-  },
-
+  metricLabel: { fontSize: 12, fontFamily: "Nunito-Regular", color: "#999" },
   metricValue: {
     fontSize: 16,
     fontFamily: "Nunito-Bold",
     marginTop: 2,
+    textAlign: "center",
   },
-
   metricSub: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Nunito-Regular",
     color: "#BBB",
-    marginTop: 1,
+    marginTop: 3,
+    textAlign: "center",
   },
-
-  alertCard: {
-    backgroundColor: "#003C75",
-    borderRadius: 22,
-    padding: 18,
-  },
-
+  alertCard: { backgroundColor: "#003C75", borderRadius: 22, padding: 18 },
   alertHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     marginBottom: 12,
   },
-
   alertIconCircle: {
     width: 30,
     height: 30,
@@ -711,26 +680,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  alertTitle: {
-    fontSize: 15,
-    fontFamily: "Nunito-Bold",
-    color: "#fff",
-  },
-
+  alertTitle: { fontSize: 15, fontFamily: "Nunito-Bold", color: "#fff" },
   alertRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   alertText: {
     fontSize: 13,
     fontFamily: "Nunito-Regular",
     color: "#fff",
     flex: 1,
   },
-
   alertTime: {
     fontSize: 11,
     fontFamily: "Nunito-Regular",
@@ -743,7 +704,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.15)",
   },
-  /* ---- Seletor de pet ---- */
   switcherButton: {
     marginLeft: 6,
     width: 26,
@@ -753,28 +713,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   switcherOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "center",
     paddingHorizontal: 30,
   },
-
   switcherSheet: {
     backgroundColor: "#fff",
     borderRadius: 22,
     padding: 18,
     gap: 6,
   },
-
   switcherTitle: {
     fontSize: 16,
     fontFamily: "Nunito-Bold",
     color: "#003C75",
     marginBottom: 8,
   },
-
   switcherItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -783,17 +739,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 14,
   },
-
-  switcherItemAtivo: {
-    backgroundColor: "#F0F7FF",
-  },
-
-  switcherFoto: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-
+  switcherItemAtivo: { backgroundColor: "#F0F7FF" },
+  switcherFoto: { width: 36, height: 36, borderRadius: 18 },
   switcherNome: {
     flex: 1,
     fontSize: 15,

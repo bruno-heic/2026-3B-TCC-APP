@@ -343,12 +343,8 @@ export function AlertRuleModal({
                 <Text style={styles.secaoTitulo}>Sinais vitais</Text>
 
                 <Text style={styles.secaoDescricao}>
-                  Deixe em branco os limites que não deseja configurar.
+                  Configure os limites de temperatura para receber alertas.
                 </Text>
-
-                {/* Frequência cardíaca removida da configuração manual. */}
-
-                <View style={styles.divisor} />
 
                 <View style={styles.limitesRow}>
                   <CampoNumero
@@ -365,30 +361,6 @@ export function AlertRuleModal({
                     campo="temperatura_max"
                     unidade="°C"
                     valor={dados.temperatura_max}
-                    desabilitado={desabilitado}
-                    onChange={atualizarNumero}
-                  />
-                </View>
-
-                <View style={styles.divisor} />
-
-                <View style={styles.limitesRow}>
-                  <CampoNumero
-                    titulo="Respiração mínima"
-                    campo="freq_respiratoria_min"
-                    unidade="rpm"
-                    inteiro
-                    valor={dados.freq_respiratoria_min}
-                    desabilitado={desabilitado}
-                    onChange={atualizarNumero}
-                  />
-
-                  <CampoNumero
-                    titulo="Respiração máxima"
-                    campo="freq_respiratoria_max"
-                    unidade="rpm"
-                    inteiro
-                    valor={dados.freq_respiratoria_max}
                     desabilitado={desabilitado}
                     onChange={atualizarNumero}
                   />
