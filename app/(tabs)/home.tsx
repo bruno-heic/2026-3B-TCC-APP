@@ -344,7 +344,7 @@ export default function Home() {
                         Olá, {usuario?.nome ?? "..."}!
                       </Text>
                       <Text style={styles.subSaudacao}>
-                        {`Tudo normal com a ${petAtivo.nome}`}
+                        {`Tudo normal com ${petAtivo.nome}`}
                       </Text>
                     </View>
 

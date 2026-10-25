@@ -34,11 +34,11 @@ type AlertRuleModalProps = {
 const regraVazia: AlertRuleFormData = {
   freq_cardiaca_min: null,
   freq_cardiaca_max: null,
-  temperatura_min: null,
-  temperatura_max: null,
-  freq_respiratoria_min: null,
-  freq_respiratoria_max: null,
-  bateria_minima: null,
+  temperatura_min: 37.5,
+  temperatura_max: 39.2,
+  freq_respiratoria_min: 10,
+  freq_respiratoria_max: 30,
+  bateria_minima: 20,
   alertar_latido: false,
   ativo: true,
 };
@@ -346,27 +346,7 @@ export function AlertRuleModal({
                   Deixe em branco os limites que não deseja configurar.
                 </Text>
 
-                <View style={styles.limitesRow}>
-                  <CampoNumero
-                    titulo="FC mínima"
-                    campo="freq_cardiaca_min"
-                    unidade="bpm"
-                    inteiro
-                    valor={dados.freq_cardiaca_min}
-                    desabilitado={desabilitado}
-                    onChange={atualizarNumero}
-                  />
-
-                  <CampoNumero
-                    titulo="FC máxima"
-                    campo="freq_cardiaca_max"
-                    unidade="bpm"
-                    inteiro
-                    valor={dados.freq_cardiaca_max}
-                    desabilitado={desabilitado}
-                    onChange={atualizarNumero}
-                  />
-                </View>
+                {/* Frequência cardíaca removida da configuração manual. */}
 
                 <View style={styles.divisor} />
 

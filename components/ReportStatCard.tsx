@@ -19,10 +19,20 @@ export function ReportStatCard({
   return (
     <View style={[styles.card, { backgroundColor }]}>
       <View style={styles.header}>
-        <Ionicons name={icon} size={16} color={iconColor} />
-        <Text style={[styles.label, { color: iconColor }]}>{label}</Text>
+        <Ionicons name={icon} size={16} color={iconColor} style={styles.icon} />
+        <Text style={[styles.label, { color: iconColor }]} numberOfLines={2}>
+          {label}
+        </Text>
       </View>
-      <Text style={styles.value}>{value}</Text>
+
+      <Text
+        style={styles.value}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
@@ -30,21 +40,29 @@ export function ReportStatCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
+    minWidth: 0,
     borderRadius: 16,
-    padding: 14,
-    minHeight: 80,
+    padding: 20,
+    minHeight: 96,
     justifyContent: "space-between",
   },
 
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 6,
   },
 
+  icon: {
+    marginTop: 1,
+  },
+
   label: {
+    flex: 1,
     fontSize: 12,
+    lineHeight: 16,
     fontFamily: "Nunito-SemiBold",
+    maxWidth: 130,
   },
 
   value: {
