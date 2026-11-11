@@ -14,6 +14,7 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -37,6 +38,9 @@ type Product = Record<string, any> & {
 
 const BLUE = "#007AFF";
 const DARK_BLUE = "#004B91";
+
+const COLEIRA_IMAGE = require("@/assets/images/Coleiraimg.png");
+const CAMERA_IMAGE = require("@/assets/images/Cameraimg.png");
 
 function getProductName(product?: Record<string, any> | null) {
   if (!product) return "Dispositivo";
@@ -65,10 +69,8 @@ function getProductType(product?: Record<string, any> | null) {
   ).toLowerCase();
 }
 
-function getDeviceIcon(type: string) {
-  if (type.includes("camera")) return "camera-outline";
-  if (type.includes("pingente")) return "radio-outline";
-  return "paw-outline";
+function getDeviceImage(type: string) {
+  return type.includes("camera") ? CAMERA_IMAGE : COLEIRA_IMAGE;
 }
 
 export default function ManageDevicesScreen() {
@@ -83,11 +85,8 @@ export default function ManageDevicesScreen() {
   const [atualizando, setAtualizando] = useState(false);
 
   const [adicionarModalVisivel, setAdicionarModalVisivel] = useState(false);
-
   const [dispositivoEmEdicao, setDispositivoEmEdicao] =
     useState<CollarDevice | null>(null);
-
-  // Pet cujas áreas seguras estão sendo gerenciadas.
   const [petAreas, setPetAreas] = useState<Pet | null>(null);
 
   const carregarDados = useCallback(async (refresh = false) => {
@@ -185,15 +184,11 @@ export default function ManageDevicesScreen() {
         accessibilityLabel={`Gerenciar ${nome}`}
       >
         <View style={styles.deviceImageArea}>
-          <View style={styles.imageHalo}>
-            <View style={styles.deviceIconCircle}>
-              <Ionicons
-                name={getDeviceIcon(tipo) as any}
-                size={compacto ? 36 : 43}
-                color={BLUE}
-              />
-            </View>
-          </View>
+          <Image
+            source={getDeviceImage(tipo)}
+            style={styles.deviceImage}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.deviceInfo}>
@@ -227,19 +222,16 @@ export default function ManageDevicesScreen() {
   function renderProductCard(produto: Product) {
     const tipo = getProductType(produto);
     const nome = getProductName(produto);
+    const isCamera = tipo.includes("camera");
 
     return (
       <View key={produto.id_produto} style={styles.addCard}>
-        <View style={styles.productIconArea}>
-          <View style={styles.imageHalo}>
-            <View style={styles.deviceIconCircle}>
-              <Ionicons
-                name={getDeviceIcon(tipo) as any}
-                size={compacto ? 36 : 43}
-                color={BLUE}
-              />
-            </View>
-          </View>
+        <View style={styles.productImageArea}>
+          <Image
+            source={getDeviceImage(tipo)}
+            style={styles.productImage}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.addInfo}>
@@ -248,7 +240,7 @@ export default function ManageDevicesScreen() {
           </Text>
 
           <Text style={styles.addSubtitle} numberOfLines={2}>
-            {tipo.includes("camera")
+            {isCamera
               ? "Monitore seu pet de onde estiver"
               : tipo.includes("pingente")
                 ? "Acompanhe seu pet com tecnologia"
@@ -256,13 +248,19 @@ export default function ManageDevicesScreen() {
           </Text>
 
           <Pressable
-            style={styles.addButton}
-            onPress={adicionarDispositivo}
+            style={[styles.addButton, isCamera && styles.addButtonDisabled]}
+            onPress={isCamera ? undefined : adicionarDispositivo}
+            disabled={isCamera}
             accessibilityRole="button"
-            accessibilityLabel={`Adicionar ${nome}`}
+            accessibilityLabel={
+              isCamera ? "Câmera em breve" : `Adicionar ${nome}`
+            }
           >
-            <Text style={styles.addButtonText}>Adicionar</Text>
-            <Ionicons name="add" size={16} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>
+              {isCamera ? "Em breve" : "Adicionar"}
+            </Text>
+
+            {!isCamera && <Ionicons name="add" size={16} color="#FFFFFF" />}
           </Pressable>
         </View>
       </View>
@@ -440,7 +438,6 @@ export default function ManageDevicesScreen() {
             disabled={atualizando}
           >
             <Ionicons name="refresh-outline" size={17} color={BLUE} />
-
             <Text style={styles.refreshButtonText}>Atualizar dispositivos</Text>
           </Pressable>
         </View>
@@ -460,7 +457,6 @@ export default function ManageDevicesScreen() {
           void carregarDados(true);
         }}
         onManageSafeAreas={(pet) => {
-          // Fecha o modal da coleira e abre o modal do pet.
           setDispositivoEmEdicao(null);
           setPetAreas(pet);
         }}
@@ -490,7 +486,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 32,
     alignItems: "center",
   },
@@ -499,24 +495,24 @@ const styles = StyleSheet.create({
     maxWidth: 620,
   },
   header: {
-    minHeight: 54,
+    minHeight: 58,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 29,
-    gap: 15,
+    marginBottom: 25,
+    gap: 12,
   },
   backButton: {
-    width: 30,
+    width: 34,
     height: 42,
     alignItems: "center",
     justifyContent: "center",
   },
   headerTitle: {
     flex: 1,
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: "700",
     color: DARK_BLUE,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   filterList: {
     gap: 8,
@@ -525,9 +521,9 @@ const styles = StyleSheet.create({
   filterChip: {
     borderWidth: 1,
     borderColor: "#D7E8F8",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 9,
     backgroundColor: "#FFFFFF",
   },
   filterChipSelected: {
@@ -546,14 +542,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
-    marginTop: 2,
+    marginBottom: 15,
+    marginTop: 3,
   },
   sectionTitle: {
     fontSize: 19,
     fontWeight: "700",
     color: DARK_BLUE,
-    letterSpacing: -0.25,
+    letterSpacing: -0.3,
   },
   sectionCount: {
     fontSize: 12,
@@ -561,107 +557,86 @@ const styles = StyleSheet.create({
     backgroundColor: "#EAF5FF",
     overflow: "hidden",
     borderRadius: 12,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   cardList: {
-    gap: 14,
+    gap: 15,
   },
   deviceCard: {
     width: "100%",
-    minHeight: 116,
+    minHeight: 125,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 11,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E7E7E7",
+    borderColor: "#E7EDF2",
     backgroundColor: "#FFFFFF",
     shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
   },
   deviceImageArea: {
-    width: "37%",
+    width: "36%",
     maxWidth: 145,
-    minWidth: 88,
+    minWidth: 90,
+    height: 100,
     alignItems: "center",
     justifyContent: "center",
   },
-  productIconArea: {
-    width: "37%",
-    maxWidth: 145,
-    minWidth: 88,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  imageHalo: {
-    width: 88,
-    height: 88,
-    maxWidth: "100%",
-    borderRadius: 50,
-    backgroundColor: "#F0F8FF",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 7,
-    borderColor: "#E7F3FF",
-  },
-  deviceIconCircle: {
+  deviceImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
   },
   deviceInfo: {
     flex: 1,
     minWidth: 0,
     paddingVertical: 4,
-    paddingLeft: 3,
+    paddingLeft: 7,
   },
   deviceName: {
     color: DARK_BLUE,
-    fontSize: 14,
-    lineHeight: 19,
-    fontWeight: "600",
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "700",
   },
   deviceModel: {
     color: "#999999",
-    fontSize: 10,
-    marginTop: 3,
+    fontSize: 11,
+    marginTop: 4,
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    marginTop: 7,
+    marginTop: 8,
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: "#34C759",
   },
   statusText: {
     color: BLUE,
-    fontSize: 10,
+    fontSize: 11,
   },
   petCaption: {
     color: "#888888",
-    fontSize: 10,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 5,
   },
   detailsButton: {
     padding: 5,
     marginLeft: 2,
   },
   addSectionHeader: {
-    marginTop: 29,
-    marginBottom: 14,
+    marginTop: 30,
+    marginBottom: 15,
   },
   addSectionText: {
     gap: 5,
@@ -707,59 +682,74 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   catalogTitle: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
     color: DARK_BLUE,
-    marginTop: 24,
-    marginBottom: 12,
+    marginTop: 27,
+    marginBottom: 14,
   },
   addCard: {
     width: "100%",
-    minHeight: 126,
+    minHeight: 135,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 11,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E7E7E7",
+    borderColor: "#E7EDF2",
     backgroundColor: "#FFFFFF",
     shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  productImageArea: {
+    width: "36%",
+    maxWidth: 145,
+    minWidth: 90,
+    height: 110,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  productImage: {
+    width: "100%",
+    height: "100%",
   },
   addInfo: {
     flex: 1,
     minWidth: 0,
-    paddingLeft: 4,
-    paddingVertical: 3,
+    paddingLeft: 7,
+    paddingVertical: 4,
     alignItems: "flex-start",
   },
   addSubtitle: {
-    color: "#AAAAAA",
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 4,
-    marginBottom: 10,
+    color: "#999999",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 5,
+    marginBottom: 11,
   },
   addButton: {
-    minWidth: 92,
-    minHeight: 29,
-    alignSelf: "flex-end",
+    minWidth: 100,
+    minHeight: 32,
+    alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    paddingHorizontal: 10,
-    borderRadius: 7,
+    paddingHorizontal: 13,
+    borderRadius: 9,
     backgroundColor: "#008FDB",
+  },
+  addButtonDisabled: {
+    backgroundColor: "#C8D3DC",
   },
   addButtonText: {
     color: "#FFFFFF",
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   loadingContainer: {
     minHeight: 150,
@@ -774,9 +764,10 @@ const styles = StyleSheet.create({
   emptyCard: {
     padding: 22,
     borderWidth: 1,
-    borderColor: "#E7E7E7",
+    borderColor: "#E7EDF2",
     borderRadius: 18,
     alignItems: "center",
+    backgroundColor: "#FFFFFF",
   },
   emptyIcon: {
     width: 58,
@@ -803,7 +794,7 @@ const styles = StyleSheet.create({
   noProductsCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E7E7E7",
+    borderColor: "#E7EDF2",
     padding: 17,
     flexDirection: "row",
     alignItems: "center",

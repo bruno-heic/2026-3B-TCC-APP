@@ -1,10 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,39 +22,135 @@ type Alerta = {
   nivel_urgencia: string;
 };
 
+type Filtro = "Todos" | "Localização" | "Temperatura" | "Som";
+
+const CORES = {
+  temperatura: "#28BA00",
+  local: "#389DD1",
+  som: "#FFDE59",
+  fundo: "#FFFFFF",
+  texto: "#171717",
+  secundario: "#858585",
+  linha: "#B7B7B7",
+  azul: "#B5DDF4",
+};
+
 function formatarData(data: string) {
-  return new Date(data).toLocaleString("pt-BR", {
+  const dataObj = new Date(data);
+
+  const dia = dataObj.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+    year: "2-digit",
   });
+
+  const hora = dataObj
+    .toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .replace(":", "h");
+
+  return `${dia} às ${hora}`;
+}
+
+function categoriaAlerta(tipo: string): Filtro | "Outro" {
+  const tipoNormalizado = tipo.toLowerCase();
+
+  if (
+    tipoNormalizado.includes("temperatura") ||
+    tipoNormalizado.includes("temp")
+  ) {
+    return "Temperatura";
+  }
+
+  if (
+    tipoNormalizado.includes("som") ||
+    tipoNormalizado.includes("audio") ||
+    tipoNormalizado.includes("ruido")
+  ) {
+    return "Som";
+  }
+
+  if (
+    tipoNormalizado.includes("local") ||
+    tipoNormalizado.includes("gps") ||
+    tipoNormalizado.includes("area") ||
+    tipoNormalizado.includes("cerca")
+  ) {
+    return "Localização";
+  }
+
+  return "Outro";
 }
 
 function tituloAlerta(tipo: string) {
   const titulos: Record<string, string> = {
-    som_elevado: "Som elevado detectado",
-    temperatura: "Temperatura fora do padrão",
+    som_elevado: "Som muito alto detectado",
+    temperatura: "Temperatura acima do normal",
     freq_cardiaca: "Frequência cardíaca fora do padrão",
     freq_respiratoria: "Frequência respiratória fora do padrão",
     bateria_baixa: "Bateria baixa",
+    localizacao: "Alteração na localização",
+    pet_fora_area: "Pet fora da área segura",
+    fora_area: "Pet fora da área segura",
+    local_nao_etiquetado: "Pet em local não etiquetado",
   };
 
-  return titulos[tipo] ?? "Alerta da coleira";
+  return titulos[tipo.toLowerCase()] ?? "Alerta da coleira";
+}
+
+function obterEstiloAlerta(tipo: string) {
+  const categoria = categoriaAlerta(tipo);
+
+  if (categoria === "Temperatura") {
+    return {
+      cor: CORES.temperatura,
+      icone: "thermometer-outline" as const,
+    };
+  }
+
+  if (categoria === "Som") {
+    return {
+      cor: CORES.som,
+      icone: "volume-high-outline" as const,
+    };
+  }
+
+  if (categoria === "Localização") {
+    return {
+      cor: CORES.local,
+      icone: "location-outline" as const,
+    };
+  }
+
+  return {
+    cor: CORES.local,
+    icone: "notifications-outline" as const,
+  };
 }
 
 export default function NotificationsScreen() {
   const router = useRouter();
+
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [filtro, setFiltro] = useState<Filtro>("Todos");
+
+  const filtros: Filtro[] = ["Todos", "Localização", "Temperatura", "Som"];
+
+  const alertasFiltrados = useMemo(() => {
+    if (filtro === "Todos") return alertas;
+
+    return alertas.filter((item) => categoriaAlerta(item.tipo) === filtro);
+  }, [alertas, filtro]);
 
   const carregarAlertas = useCallback(async () => {
     setCarregando(true);
     setErro("");
 
     try {
-      // Obtém o usuário autenticado.
       const {
         data: { user },
         error: erroAuth,
@@ -67,7 +164,6 @@ export default function NotificationsScreen() {
         return;
       }
 
-      // Busca o cadastro do usuário.
       const { data: usuario, error: erroUsuario } = await supabase
         .from("usuario")
         .select("id_usuario")
@@ -76,7 +172,6 @@ export default function NotificationsScreen() {
 
       if (erroUsuario) throw erroUsuario;
 
-      // Busca os pets desse usuário.
       const { data: pets, error: erroPets } = await supabase
         .from("pet")
         .select("id_pet")
@@ -91,7 +186,6 @@ export default function NotificationsScreen() {
         return;
       }
 
-      // Busca os dispositivos associados a esses pets.
       const { data: dispositivos, error: erroDispositivos } = await supabase
         .from("dispositivo")
         .select("id_dispositivo")
@@ -108,7 +202,6 @@ export default function NotificationsScreen() {
         return;
       }
 
-      // Busca os alertas mais recentes desses dispositivos.
       const { data, error: erroAlertas } = await supabase
         .from("alerta")
         .select(
@@ -135,44 +228,59 @@ export default function NotificationsScreen() {
     }, [carregarAlertas]),
   );
 
-  const renderAlerta = ({ item }: { item: Alerta }) => {
+  const renderAlerta = ({ item, index }: { item: Alerta; index: number }) => {
+    const estilo = obterEstiloAlerta(item.tipo);
     const urgente = item.nivel_urgencia === "alta";
 
     return (
-      <View style={styles.alertaCard}>
+      <View style={styles.itemTimeline}>
+        {/* Linha vertical da timeline */}
         <View
           style={[
-            styles.icone,
-            { backgroundColor: urgente ? "#FDE8E7" : "#DCEEFB" },
+            styles.linhaTimeline,
+            index === 0 && styles.linhaPrimeiro,
+            index === alertasFiltrados.length - 1 && styles.linhaUltimo,
           ]}
-        >
-          <Ionicons
-            name="notifications"
-            size={22}
-            color={urgente ? "#E74C3C" : "#2E98FE"}
-          />
+        />
+
+        {/* Marcador colorido */}
+        <View style={[styles.marcador, { backgroundColor: estilo.cor }]}>
+          <Ionicons name="warning-outline" size={22} color="#FFFFFF" />
         </View>
 
-        <View style={styles.conteudo}>
+        {/* Cartão do alerta */}
+        <View style={styles.alertaCard}>
+          <Text style={styles.data}>{formatarData(item.data_hora)}</Text>
+
           <Text style={styles.titulo}>{tituloAlerta(item.tipo)}</Text>
 
           <Text style={styles.descricao}>
             {item.descricao || "A coleira registrou uma ocorrência."}
           </Text>
 
-          <Text style={styles.data}>{formatarData(item.data_hora)}</Text>
-
           <View style={styles.rodape}>
-            <Text
+            <View
               style={[
-                styles.urgencia,
-                { color: urgente ? "#E74C3C" : "#2E98FE" },
+                styles.categoriaTag,
+                { backgroundColor: estilo.cor + "20" },
               ]}
             >
-              Urgência: {item.nivel_urgencia}
-            </Text>
+              <View
+                style={[styles.pontoCategoria, { backgroundColor: estilo.cor }]}
+              />
+              <Text
+                style={[
+                  styles.categoriaTexto,
+                  { color: estilo.cor === CORES.som ? "#8A7100" : estilo.cor },
+                ]}
+              >
+                {categoriaAlerta(item.tipo) === "Outro"
+                  ? "Outro"
+                  : categoriaAlerta(item.tipo)}
+              </Text>
+            </View>
 
-            <Text style={styles.status}>{item.status.replace("_", " ")}</Text>
+            {urgente && <Text style={styles.urgencia}>Alta urgência</Text>}
           </View>
         </View>
       </View>
@@ -181,49 +289,89 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Cabeçalho */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.voltar}
           accessibilityLabel="Voltar"
         >
-          <Ionicons name="chevron-back" size={26} color="#1F1F1F" />
+          <Ionicons name="chevron-back" size={27} color="#003C75" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitulo}>Notificações</Text>
+        <View style={styles.headerCentro}>
+          <Ionicons name="notifications-outline" size={31} color="#171717" />
+          <Text style={styles.headerTitulo}>Alertas</Text>
+        </View>
 
         <TouchableOpacity
           onPress={carregarAlertas}
           style={styles.atualizar}
           accessibilityLabel="Atualizar alertas"
         >
-          <Ionicons name="refresh" size={21} color="#2E98FE" />
+          <Ionicons name="refresh-outline" size={22} color="#389DD1" />
         </TouchableOpacity>
       </View>
 
+      {/* Filtros */}
+      <View style={styles.filtrosContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtros}
+        >
+          {filtros.map((item) => {
+            const selecionado = filtro === item;
+
+            return (
+              <TouchableOpacity
+                key={item}
+                onPress={() => setFiltro(item)}
+                style={[
+                  styles.filtroBotao,
+                  selecionado && styles.filtroSelecionado,
+                ]}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[
+                    styles.filtroTexto,
+                    selecionado && styles.filtroTextoSelecionado,
+                  ]}
+                >
+                  {item === "Localização" ? "Local" : item}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Conteúdo */}
       {carregando ? (
         <ActivityIndicator
           size="large"
-          color="#2E98FE"
-          style={{ marginTop: 40 }}
+          color="#389DD1"
+          style={{ marginTop: 50 }}
         />
       ) : erro ? (
         <View style={styles.vazio}>
-          <Ionicons name="cloud-offline-outline" size={42} color="#999" />
+          <Ionicons name="cloud-offline-outline" size={45} color="#999" />
           <Text style={styles.vazioTitulo}>Não foi possível carregar</Text>
           <Text style={styles.vazioTexto}>{erro}</Text>
+
           <TouchableOpacity style={styles.botao} onPress={carregarAlertas}>
             <Text style={styles.botaoTexto}>Tentar novamente</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
-          data={alertas}
+          data={alertasFiltrados}
           keyExtractor={(item) => String(item.id_alerta)}
           renderItem={renderAlerta}
           contentContainerStyle={[
             styles.lista,
-            alertas.length === 0 && styles.listaVazia,
+            alertasFiltrados.length === 0 && styles.listaVazia,
           ]}
           showsVerticalScrollIndicator={false}
           refreshing={carregando}
@@ -233,11 +381,19 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="notifications-off-outline"
                 size={46}
-                color="#999"
+                color="#AAAAAA"
               />
-              <Text style={styles.vazioTitulo}>Tudo tranquilo por aqui</Text>
+
+              <Text style={styles.vazioTitulo}>
+                {alertas.length === 0
+                  ? "Tudo tranquilo por aqui!"
+                  : "Nenhum alerta encontrado"}
+              </Text>
+
               <Text style={styles.vazioTexto}>
-                Quando a coleira registrar um alerta, ele aparecerá nesta tela.
+                {alertas.length === 0
+                  ? "Quando a coleira registrar um alerta, ele aparecerá nesta tela."
+                  : `Não existem alertas de ${filtro.toLowerCase()} no momento.`}
               </Text>
             </View>
           }
@@ -250,120 +406,225 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
   },
+
   header: {
-    paddingTop: 58,
-    paddingHorizontal: 18,
-    paddingBottom: 18,
+    paddingTop: 55,
+    paddingHorizontal: 15,
+    paddingBottom: 13,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
   },
+
   voltar: {
-    width: 40,
+    width: 38,
     height: 40,
     justifyContent: "center",
   },
+
+  headerCentro: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
   headerTitulo: {
     fontFamily: "Nunito-Bold",
-    fontSize: 21,
-    color: "#003C75",
+    fontSize: 29,
+    color: "#111111",
   },
+
   atualizar: {
-    width: 40,
+    width: 38,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
   },
-  lista: {
-    padding: 18,
-    gap: 12,
-    paddingBottom: 40,
+
+  filtrosContainer: {
+    paddingBottom: 12,
   },
+
+  filtros: {
+    paddingHorizontal: 15,
+    gap: 9,
+    alignItems: "center",
+  },
+
+  filtroBotao: {
+    backgroundColor: "#E8E8E8",
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    minWidth: 68,
+    alignItems: "center",
+  },
+
+  filtroSelecionado: {
+    backgroundColor: "#B5DDF0",
+  },
+
+  filtroTexto: {
+    fontFamily: "Nunito-Regular",
+    fontSize: 13,
+    color: "#666666",
+  },
+
+  filtroTextoSelecionado: {
+    color: "#245B78",
+    fontFamily: "Nunito-Bold",
+  },
+
+  lista: {
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 35,
+  },
+
   listaVazia: {
     flexGrow: 1,
     justifyContent: "center",
   },
-  alertaCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
+
+  itemTimeline: {
     flexDirection: "row",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "#EEF1F5",
+    alignItems: "center",
+    paddingVertical: 9,
+    minHeight: 125,
   },
-  icone: {
-    width: 44,
-    height: 44,
+
+  linhaTimeline: {
+    position: "absolute",
+    left: 27,
+    top: -9,
+    bottom: -9,
+    width: 1,
+    backgroundColor: "#B8B8B8",
+  },
+
+  linhaPrimeiro: {
+    top: "50%",
+  },
+
+  linhaUltimo: {
+    bottom: "50%",
+  },
+
+  marcador: {
+    width: 39,
+    height: 39,
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 8,
+    zIndex: 1,
   },
-  conteudo: {
+
+  alertaCard: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 19,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: "#EAEAEA",
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  titulo: {
-    fontFamily: "Nunito-Bold",
-    fontSize: 15,
-    color: "#1F1F1F",
-  },
-  descricao: {
-    fontFamily: "Nunito-Regular",
-    fontSize: 13,
-    color: "#666666",
-    marginTop: 4,
-  },
+
   data: {
     fontFamily: "Nunito-Regular",
-    fontSize: 12,
+    fontSize: 11,
     color: "#999999",
-    marginTop: 8,
+    marginBottom: 3,
   },
+
+  titulo: {
+    fontFamily: "Nunito-Bold",
+    fontSize: 13,
+    color: "#171717",
+  },
+
+  descricao: {
+    fontFamily: "Nunito-Regular",
+    fontSize: 11,
+    color: "#555555",
+    marginTop: 3,
+    lineHeight: 16,
+  },
+
   rodape: {
-    marginTop: 8,
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "space-between",
-    gap: 6,
+    flexWrap: "wrap",
+    marginTop: 7,
+    gap: 5,
   },
+
+  categoriaTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 5,
+  },
+
+  pontoCategoria: {
+    width: 6,
+    height: 6,
+    borderRadius: 4,
+  },
+
+  categoriaTexto: {
+    fontFamily: "Nunito-Bold",
+    fontSize: 10,
+  },
+
   urgencia: {
     fontFamily: "Nunito-Bold",
-    fontSize: 12,
+    fontSize: 10,
+    color: "#E45B50",
   },
-  status: {
-    fontFamily: "Nunito-Regular",
-    fontSize: 12,
-    color: "#777777",
-    textTransform: "capitalize",
-  },
+
   vazio: {
     alignItems: "center",
-    paddingHorizontal: 28,
+    paddingHorizontal: 30,
     gap: 10,
   },
+
   vazioTitulo: {
     fontFamily: "Nunito-Bold",
     fontSize: 17,
     color: "#003C75",
     textAlign: "center",
   },
+
   vazioTexto: {
     fontFamily: "Nunito-Regular",
-    fontSize: 14,
-    color: "#777777",
+    fontSize: 13,
+    color: "#888888",
     textAlign: "center",
-    lineHeight: 21,
+    lineHeight: 20,
   },
+
   botao: {
-    backgroundColor: "#2E98FE",
+    backgroundColor: "#389DD1",
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    marginTop: 6,
+    marginTop: 5,
   },
+
   botaoTexto: {
     color: "#FFFFFF",
     fontFamily: "Nunito-Bold",

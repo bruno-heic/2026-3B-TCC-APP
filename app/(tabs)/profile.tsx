@@ -490,7 +490,7 @@ export default function Perfil() {
               icon: "document-text-outline",
               label: "Termos de uso",
               onPress: () => {
-                router.push("/(profile)/termsOfUse");
+                router.push("/(profile)/TermsOfUse");
               },
             },
             {
