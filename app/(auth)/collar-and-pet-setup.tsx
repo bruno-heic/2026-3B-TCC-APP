@@ -14,7 +14,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -25,9 +24,12 @@ type Pet = {
   raca?: string | null;
 };
 
+const AZUL = "#3498db";
+
 export default function CollarAndPetSetup() {
   const params = useLocalSearchParams<{
     idProduto?: string | string[];
+
     numSerie?: string | string[];
   }>();
 
@@ -38,10 +40,6 @@ export default function CollarAndPetSetup() {
   const numSerie = Array.isArray(params.numSerie)
     ? params.numSerie[0]
     : params.numSerie;
-
-  const { width } = useWindowDimensions();
-  const compacto = width < 360;
-  const larguraConteudo = Math.min(width - (compacto ? 32 : 48), 520);
 
   const [pets, setPets] = useState<Pet[]>([]);
   const [petSelecionado, setPetSelecionado] = useState<number | null>(null);
@@ -79,8 +77,6 @@ export default function CollarAndPetSetup() {
         setPetSelecionado(listaPets[0].id_pet);
       }
     } catch (error) {
-      console.error("Erro ao carregar pets:", error);
-
       Alert.alert(
         "Erro",
         error instanceof Error
@@ -100,128 +96,104 @@ export default function CollarAndPetSetup() {
     if (!Number.isInteger(produtoId) || produtoId <= 0) {
       Alert.alert(
         "Coleira não identificada",
-        "Não recebemos um ID válido da coleira. Volte à etapa de conexão e tente novamente.",
+        "Volte à etapa de conexão e tente novamente.",
       );
+
       return;
     }
 
     if (petSelecionado === null) {
       Alert.alert("Selecione um pet", "Escolha o pet que usará esta coleira.");
+
       return;
     }
 
     if (!nomeColeira.trim()) {
       Alert.alert("Nome da coleira", "Digite um nome para sua coleira.");
+
       return;
     }
 
     try {
       setSalvando(true);
 
-      console.log("Iniciando configuração da coleira:", {
-        produtoId,
-        petSelecionado,
-        numSerie,
-      });
-
-      // 1. Confirma a autenticação.
       const {
         data: { user },
         error: erroAuth,
       } = await supabase.auth.getUser();
 
-      if (erroAuth) {
-        console.error("Erro de autenticação:", erroAuth);
-        throw erroAuth;
-      }
+      if (erroAuth) throw erroAuth;
 
-      if (!user) {
-        throw new Error("Não foi possível identificar sua conta.");
-      }
-
-      console.log("Consultando produto:", produtoId);
+      if (!user) throw new Error("Não foi possível identificar sua conta.");
 
       const { data: produto, error: erroProduto } = await supabase
+
         .from("produto")
+
         .select("id_produto, status")
+
         .eq("id_produto", produtoId)
+
         .single();
 
-      if (erroProduto) {
-        console.error("Erro ao consultar produto:", erroProduto);
-        throw erroProduto;
-      }
+      if (erroProduto) throw erroProduto;
 
-      if (!produto) {
-        throw new Error(
-          `O produto de ID ${produtoId} não foi encontrado ou não está acessível para sua conta. Verifique o ID e as políticas de leitura do Supabase.`,
-        );
-      }
-
-      console.log("Produto encontrado:", produto);
-
-      console.log("Consultando dispositivo vinculado...");
+      if (!produto) throw new Error("O produto não foi encontrado.");
 
       const { data: existente, error: erroBusca } = await supabase
+
         .from("dispositivo")
+
         .select("id_dispositivo")
+
         .eq("id_produto", produtoId)
+
         .maybeSingle();
 
-      if (erroBusca) {
-        console.error("Erro ao consultar dispositivo:", erroBusca);
-        throw erroBusca;
-      }
+      if (erroBusca) throw erroBusca;
 
-      // 4. Vincula o dispositivo ao pet selecionado.
       if (existente) {
-        const { error: erroAtualizacao } = await supabase
+        const { error } = await supabase
+
           .from("dispositivo")
+
           .update({
             id_pet: petSelecionado,
+
             nome_personalizado: nomeColeira.trim(),
           })
+
           .eq("id_dispositivo", existente.id_dispositivo);
 
-        if (erroAtualizacao) {
-          throw erroAtualizacao;
-        }
+        if (error) throw error;
       } else {
-        const { error: erroInsercao } = await supabase
-          .from("dispositivo")
-          .insert({
-            id_produto: produtoId,
-            id_pet: petSelecionado,
-            nome_personalizado: nomeColeira.trim(),
-          });
+        const { error } = await supabase.from("dispositivo").insert({
+          id_produto: produtoId,
 
-        if (erroInsercao) {
-          throw erroInsercao;
-        }
+          id_pet: petSelecionado,
+
+          nome_personalizado: nomeColeira.trim(),
+        });
+
+        if (error) throw error;
       }
 
       const resultadoAtivacao = await ativarProduto(produtoId);
 
       if (!resultadoAtivacao.sucess) {
         throw new Error(
-          `O vínculo com seu pet foi salvo, mas a ativação falhou: ${
-            resultadoAtivacao.error || "Não foi possível ativar a coleira."
-          }`,
+          `O vínculo foi salvo, mas a ativação falhou: ${resultadoAtivacao.error || "Não foi possível ativar a coleira."}`,
         );
       }
+
       Alert.alert(
         "Tudo pronto!",
+
         "Sua coleira foi configurada, vinculada ao seu pet e ativada com sucesso.",
-        [
-          {
-            text: "Continuar",
-            onPress: () => router.replace("/(tabs)/home"),
-          },
-        ],
+
+        [{ text: "Continuar", onPress: () => router.replace("/(tabs)/home") }],
       );
     } catch (error) {
-      console.error("Erro ao salvar a configuração:", error);
-
       const mensagem =
         error instanceof Error
           ? error.message
@@ -240,405 +212,417 @@ export default function CollarAndPetSetup() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.content, { width: larguraConteudo }]}>
-          <Text style={[styles.title, compacto && styles.titleCompacto]}>
-            Configuração da coleira
-          </Text>
+        <Text style={styles.title}>Configuração da coleira</Text>
 
-          <Text style={styles.subtitle}>
-            Estamos quase terminando! Escolha seu pet e personalize sua coleira
-            para concluir a configuração.
-          </Text>
+        <Text style={styles.subtitle}>
+          Estamos quase terminando! Escolha seu pet e personalize sua coleira
+          para concluir a configuração.
+        </Text>
 
-          {numSerie ? (
-            <View style={styles.connectionCard}>
-              <View style={styles.connectionIcon}>
-                <Ionicons name="bluetooth" size={23} color={COLORS.blue} />
-              </View>
+        {numSerie ? (
+          <View style={styles.connectionCard}>
+            <Ionicons name="bluetooth" size={22} color={AZUL} />
 
-              <View style={styles.connectionInfo}>
-                <Text style={styles.connectionTitle}>Coleira conectada</Text>
-                <Text style={styles.connectionSubtitle}>
-                  Número de série: {numSerie}
-                </Text>
-              </View>
+            <View style={styles.connectionInfo}>
+              <Text style={styles.connectionTitle}>Coleira conectada</Text>
 
-              <Ionicons name="checkmark-circle" size={22} color="#34A853" />
-            </View>
-          ) : null}
-
-          <Text style={styles.sectionTitle}>Qual pet usará a coleira?</Text>
-
-          <Text style={styles.sectionSubtitle}>
-            Selecione um dos pets cadastrados na sua conta.
-          </Text>
-
-          {carregandoPets ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={COLORS.blue} />
-              <Text style={styles.loadingText}>Carregando seus pets...</Text>
-            </View>
-          ) : pets.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="paw-outline" size={28} color={COLORS.blue} />
-              </View>
-
-              <Text style={styles.emptyTitle}>Você ainda não tem pets</Text>
-
-              <Text style={styles.emptyText}>
-                Cadastre um pet antes de vincular sua coleira.
+              <Text style={styles.connectionSubtitle}>
+                Número de série: {numSerie}
               </Text>
-
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={() => router.push("/home")}
-              >
-                <Text style={styles.secondaryButtonText}>Voltar ao início</Text>
-              </Pressable>
             </View>
-          ) : (
-            <View style={styles.petList}>
-              {pets.map((pet) => {
-                const selecionado = petSelecionado === pet.id_pet;
 
-                return (
-                  <Pressable
-                    key={pet.id_pet}
-                    style={[
-                      styles.petCard,
-                      selecionado && styles.petCardSelected,
-                    ]}
-                    onPress={() => setPetSelecionado(pet.id_pet)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: selecionado }}
-                  >
-                    <View
-                      style={[
-                        styles.petIcon,
-                        selecionado && styles.petIconSelected,
-                      ]}
-                    >
-                      <Ionicons
-                        name="paw"
-                        size={22}
-                        color={selecionado ? COLORS.blue : "#888"}
-                      />
-                    </View>
-
-                    <View style={styles.petInfo}>
-                      <Text style={styles.petName}>{pet.nome}</Text>
-
-                      {!!pet.especie && (
-                        <Text style={styles.petDetails}>
-                          {pet.especie}
-                          {pet.raca ? ` • ${pet.raca}` : ""}
-                        </Text>
-                      )}
-                    </View>
-
-                    <Ionicons
-                      name={
-                        selecionado ? "checkmark-circle" : "ellipse-outline"
-                      }
-                      size={23}
-                      color={selecionado ? COLORS.blue : "#C7C7CC"}
-                    />
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-
-          <Text style={styles.sectionTitle}>Personalize sua coleira</Text>
-
-          <Text style={styles.sectionSubtitle}>
-            Escolha um nome fácil de reconhecer no aplicativo.
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="create-outline" size={20} color="#8E8E93" />
-
-            <TextInput
-              style={styles.input}
-              value={nomeColeira}
-              onChangeText={setNomeColeira}
-              placeholder="Ex.: Coleira do Max"
-              placeholderTextColor="#999"
-              maxLength={40}
-              autoCapitalize="sentences"
-              returnKeyType="done"
-              editable={!salvando}
-            />
+            <Ionicons name="checkmark-circle" size={22} color="#34A853" />
           </View>
+        ) : null}
 
-          <Pressable
-            style={[
-              styles.primaryButton,
-              (salvando || carregandoPets || pets.length === 0) &&
-                styles.buttonDisabled,
-            ]}
-            onPress={concluirConfiguracao}
-            disabled={salvando || carregandoPets || pets.length === 0}
-            accessibilityRole="button"
-          >
-            {salvando ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Text style={styles.primaryButtonText}>
-                  Concluir configuração
-                </Text>
-                <Ionicons name="arrow-forward" size={19} color="#FFFFFF" />
-              </>
-            )}
-          </Pressable>
+        <Text style={styles.sectionTitle}>Qual pet usará a coleira?</Text>
 
-          <Text style={styles.footerText}>
-            Você poderá consultar as informações da sua coleira no aplicativo.
-          </Text>
-        </View>
+        <Text style={styles.sectionSubtitle}>
+          Selecione um dos pets cadastrados na sua conta.
+        </Text>
+
+        {carregandoPets ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={AZUL} />
+
+            <Text style={styles.loadingText}>Carregando seus pets...</Text>
+          </View>
+        ) : pets.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="paw-outline" size={30} color={AZUL} />
+
+            <Text style={styles.emptyTitle}>Você ainda não tem pets</Text>
+
+            <Text style={styles.emptyText}>
+              Cadastre um pet antes de vincular sua coleira.
+            </Text>
+
+            <Pressable onPress={() => router.push("/home")}>
+              <Text style={styles.linkText}>Voltar ao início</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.petList}>
+            {pets.map((pet) => {
+              const selecionado = petSelecionado === pet.id_pet;
+
+              return (
+                <Pressable
+                  key={pet.id_pet}
+                  style={[
+                    styles.petCard,
+                    selecionado && styles.petCardSelected,
+                  ]}
+                  onPress={() => setPetSelecionado(pet.id_pet)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selecionado }}
+                >
+                  <Ionicons
+                    name="paw-outline"
+                    size={24}
+                    color={selecionado ? AZUL : "#888888"}
+                  />
+
+                  <View style={styles.petInfo}>
+                    <Text style={styles.petName}>{pet.nome}</Text>
+
+                    {!!pet.especie && (
+                      <Text style={styles.petDetails}>
+                        {pet.especie}
+                        {pet.raca ? ` • ${pet.raca}` : ""}
+                      </Text>
+                    )}
+                  </View>
+
+                  <Ionicons
+                    name={selecionado ? "checkmark-circle" : "ellipse-outline"}
+                    size={22}
+                    color={selecionado ? AZUL : "#999999"}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        <Text style={styles.sectionTitle}>Personalize sua coleira</Text>
+
+        <Text style={styles.sectionSubtitle}>
+          Escolha um nome fácil de reconhecer no aplicativo.
+        </Text>
+
+        <TextInput
+          style={styles.input}
+          value={nomeColeira}
+          onChangeText={setNomeColeira}
+          placeholder="Ex.: Coleira do Max"
+          placeholderTextColor="#999999"
+          maxLength={40}
+          autoCapitalize="sentences"
+          returnKeyType="done"
+          editable={!salvando}
+        />
+
+        <Text style={styles.footerText}>
+          Você poderá consultar as informações da sua coleira no aplicativo.
+        </Text>
       </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[
+            styles.button,
+            (salvando || carregandoPets || pets.length === 0) &&
+              styles.buttonDisabled,
+          ]}
+          onPress={concluirConfiguracao}
+          disabled={salvando || carregandoPets || pets.length === 0}
+        >
+          {salvando ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Concluir configuração</Text>
+          )}
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
 
-const COLORS = {
-  blue: "#3498db",
-  background: "#FFFFFF",
-  text: "#222222",
-  secondary: "#777777",
-  border: "#E5E5E5",
-  lightBlue: "#F0F8FF",
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+
+    backgroundColor: "#FFFFFF",
   },
+
   scrollContent: {
     flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 36,
+
+    paddingHorizontal: 25,
+
+    paddingBottom: 20,
   },
-  content: {
-    maxWidth: 520,
-    alignSelf: "center",
-    paddingTop: 12,
-  },
+
   title: {
-    fontSize: 23,
+    marginTop: 15,
+
+    marginBottom: 15,
+
+    fontSize: 20,
+
     fontFamily: "Nunito-Bold",
-    color: COLORS.text,
+
     textAlign: "center",
-    marginTop: 8,
-    marginBottom: 8,
+
+    color: "#000000",
   },
-  titleCompacto: {
-    fontSize: 21,
-  },
+
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
+
     lineHeight: 21,
+
     fontFamily: "Nunito-Regular",
-    color: COLORS.secondary,
+
+    color: "#777777",
+
     textAlign: "center",
-    marginBottom: 22,
+
+    marginBottom: 24,
   },
+
   connectionCard: {
     flexDirection: "row",
+
     alignItems: "center",
-    padding: 13,
-    borderWidth: 1,
-    borderColor: "#DDEEDB",
-    backgroundColor: "#F7FCF6",
-    borderRadius: 14,
-    marginBottom: 25,
-    gap: 11,
+
+    gap: 12,
+
+    paddingVertical: 12,
+
+    borderBottomWidth: 1,
+
+    borderBottomColor: "#E5E5E5",
+
+    marginBottom: 24,
   },
-  connectionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: "#E5F2FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+
   connectionInfo: {
     flex: 1,
   },
+
   connectionTitle: {
-    fontSize: 14,
     fontFamily: "Nunito-Bold",
-    color: COLORS.text,
+
+    fontSize: 15,
+
+    color: "#000000",
   },
+
   connectionSubtitle: {
-    fontSize: 11,
     fontFamily: "Nunito-Regular",
-    color: COLORS.secondary,
+
+    fontSize: 12,
+
+    color: "#777777",
+
     marginTop: 3,
   },
+
   sectionTitle: {
-    fontSize: 17,
     fontFamily: "Nunito-Bold",
-    color: COLORS.text,
+
+    fontSize: 17,
+
+    color: "#000000",
+
     marginBottom: 5,
-    marginTop: 7,
+
+    marginTop: 10,
   },
+
   sectionSubtitle: {
-    fontSize: 13,
-    lineHeight: 19,
     fontFamily: "Nunito-Regular",
-    color: COLORS.secondary,
+
+    fontSize: 13,
+
+    lineHeight: 19,
+
+    color: "#777777",
+
     marginBottom: 14,
   },
+
   loadingContainer: {
-    minHeight: 90,
+    minHeight: 70,
+
     flexDirection: "row",
+
     justifyContent: "center",
+
     alignItems: "center",
+
     gap: 10,
   },
+
   loadingText: {
-    fontSize: 13,
     fontFamily: "Nunito-Regular",
-    color: COLORS.secondary,
+
+    fontSize: 13,
+
+    color: "#777777",
   },
+
   petList: {
-    gap: 10,
-    marginBottom: 21,
+    marginBottom: 20,
   },
+
   petCard: {
-    minHeight: 72,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 15,
-    padding: 12,
+    minHeight: 60,
+
+    borderBottomWidth: 1,
+
+    borderBottomColor: "#E5E5E5",
+
+    paddingVertical: 12,
+
     flexDirection: "row",
+
     alignItems: "center",
+
     gap: 12,
-    backgroundColor: "#FFFFFF",
   },
+
   petCardSelected: {
-    borderColor: COLORS.blue,
-    backgroundColor: COLORS.lightBlue,
+    backgroundColor: "#F7FBFF",
   },
-  petIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 13,
-    backgroundColor: "#F3F3F3",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  petIconSelected: {
-    backgroundColor: "#DCEEFF",
-  },
+
   petInfo: {
     flex: 1,
   },
+
   petName: {
     fontSize: 15,
+
     fontFamily: "Nunito-Bold",
-    color: COLORS.text,
+
+    color: "#000000",
   },
+
   petDetails: {
     fontSize: 12,
+
     fontFamily: "Nunito-Regular",
-    color: COLORS.secondary,
+
+    color: "#777777",
+
     marginTop: 3,
-    textTransform: "capitalize",
   },
+
   emptyCard: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+
     alignItems: "center",
-    marginBottom: 22,
   },
-  emptyIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 17,
-    backgroundColor: COLORS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
+
   emptyTitle: {
-    fontSize: 16,
     fontFamily: "Nunito-Bold",
-    color: COLORS.text,
-    textAlign: "center",
+
+    fontSize: 16,
+
+    color: "#000000",
+
+    marginTop: 10,
   },
+
   emptyText: {
-    fontSize: 13,
-    lineHeight: 19,
     fontFamily: "Nunito-Regular",
-    color: COLORS.secondary,
+
+    fontSize: 13,
+
+    color: "#777777",
+
     textAlign: "center",
+
     marginTop: 6,
   },
-  secondaryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    marginTop: 8,
-  },
-  secondaryButtonText: {
+
+  linkText: {
+    fontFamily: "Nunito-SemiBold",
+
     fontSize: 14,
-    fontFamily: "Nunito-Bold",
-    color: COLORS.blue,
+
+    color: AZUL,
+
+    marginTop: 15,
   },
-  inputContainer: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderColor: "#DADADA",
-    borderRadius: 13,
-    paddingHorizontal: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 23,
-  },
+
   input: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 50,
-    fontSize: 14,
+    height: 45,
+
+    borderBottomWidth: 2,
+
+    borderBottomColor: "#FFD700",
+
     fontFamily: "Nunito-Regular",
-    color: COLORS.text,
-    paddingVertical: 10,
+
+    fontSize: 16,
+
+    color: "#000000",
+
+    paddingBottom: 8,
+
+    marginBottom: 18,
   },
-  primaryButton: {
-    minHeight: 53,
-    width: "100%",
-    borderRadius: 13,
-    backgroundColor: COLORS.blue,
-    paddingHorizontal: 18,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.55,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontFamily: "Nunito-Bold",
-  },
+
   footerText: {
-    color: "#999999",
-    fontSize: 11,
-    lineHeight: 17,
     fontFamily: "Nunito-Regular",
+
+    fontSize: 12,
+
+    lineHeight: 18,
+
+    color: "#999999",
+
     textAlign: "center",
-    marginTop: 16,
-    paddingHorizontal: 8,
+
+    marginTop: 18,
+
+    marginBottom: 20,
+  },
+
+  footer: {
+    paddingHorizontal: 20,
+
+    paddingTop: 10,
+
+    paddingBottom: 25,
+
+    backgroundColor: "#FFFFFF",
+  },
+
+  button: {
+    height: 60,
+
+    backgroundColor: "#2E98FE",
+
+    borderRadius: 32,
+
+    justifyContent: "center",
+
+    alignItems: "center",
+  },
+
+  buttonText: {
+    fontFamily: "Nunito-SemiBold",
+
+    fontSize: 20,
+
+    color: "#FFFFFF",
+  },
+
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });

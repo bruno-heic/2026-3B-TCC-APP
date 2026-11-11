@@ -1,4 +1,4 @@
-import { AddcollarModal } from "@/components/AddCollarForm";
+import { AddCollarModal } from "@/components/AddCollarForm";
 import { SucessSignUserModal } from "@/components/sucessSignUser";
 import { handleSignUser } from "@/lib/actions/user-actions";
 import { Ionicons } from "@expo/vector-icons";
@@ -247,7 +247,7 @@ export default function SignUp() {
         onAddPet={handleAddPet}
         onDoLater={handleAddPetLater}
       />
-      <AddcollarModal
+      <AddCollarModal
         visible={addDeviceVisible}
         onAddCollar={handleAddDevice}
         onDoLater={handleAddDeviceLater}

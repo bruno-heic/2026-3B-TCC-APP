@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
@@ -31,7 +32,8 @@ type Props = {
   onClose: () => void;
 };
 
-const BLUE = "#007AFF";
+const BLUE = "#3498db";
+const YELLOW = "#FFD700";
 
 export function SafeAreasModal({ visible, pet, onClose }: Props) {
   const [areas, setAreas] = useState<SafeArea[]>([]);
@@ -276,26 +278,22 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
           <View style={styles.formCard}>
             <Text style={styles.sectionTitle}>Nova área segura</Text>
 
-            <Text style={styles.label}>Nome do local</Text>
-
             <TextInput
               value={nome}
               onChangeText={setNome}
-              placeholder="Ex.: Minha casa"
-              placeholderTextColor="#8E8E93"
+              placeholder="Nome do local"
+              placeholderTextColor="#999"
               maxLength={60}
               style={styles.input}
               returnKeyType="next"
             />
 
-            <Text style={styles.label}>Raio de segurança (metros)</Text>
-
             <TextInput
               value={raio}
               onChangeText={setRaio}
               keyboardType="number-pad"
-              placeholder="100"
-              placeholderTextColor="#8E8E93"
+              placeholder="Raio de segurança (metros)"
+              placeholderTextColor="#999"
               style={styles.input}
             />
 
@@ -328,7 +326,7 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
 
             {latitude !== null && longitude !== null && (
               <View style={styles.coordinates}>
-                <Ionicons name="checkmark-circle" size={19} color="#248A3D" />
+                <Ionicons name="checkmark-circle" size={20} color="#248A3D" />
 
                 <View style={styles.coordinatesInfo}>
                   <Text style={styles.coordinatesTitle}>
@@ -355,7 +353,7 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
                   <Ionicons
                     name="close-circle-outline"
                     size={21}
-                    color="#8E8E93"
+                    color="#999"
                   />
                 </Pressable>
               </View>
@@ -373,7 +371,7 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
               {salvando ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+                <Ionicons name="add-circle-outline" size={21} color="#FFFFFF" />
               )}
 
               <Text style={styles.saveButtonText}>
@@ -385,7 +383,9 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
           <View style={styles.listHeader}>
             <Text style={styles.sectionTitle}>Locais cadastrados</Text>
 
-            <Text style={styles.count}>{areas.length}</Text>
+            <View style={styles.count}>
+              <Text style={styles.countText}>{areas.length}</Text>
+            </View>
           </View>
 
           {carregando ? (
@@ -412,7 +412,7 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
             areas.map((area) => (
               <View key={area.id_area} style={styles.areaCard}>
                 <View style={styles.areaIcon}>
-                  <Ionicons name="location" size={22} color={BLUE} />
+                  <Ionicons name="location" size={23} color={BLUE} />
                 </View>
 
                 <View style={styles.areaInfo}>
@@ -438,7 +438,7 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
                   {excluindoId === area.id_area ? (
                     <ActivityIndicator color="#D92D20" />
                   ) : (
-                    <Ionicons name="trash-outline" size={20} color="#D92D20" />
+                    <Ionicons name="trash-outline" size={21} color="#D92D20" />
                   )}
                 </Pressable>
               </View>
@@ -453,204 +453,259 @@ export function SafeAreasModal({ visible, pet, onClose }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 25,
     backgroundColor: "#FFFFFF",
   },
+
   header: {
     minHeight: 58,
-    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#D1D1D6",
+    borderBottomColor: "#E5E5EA",
   },
+
   headerTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#111111",
+    fontSize: 20,
+    fontFamily: "Nunito-Bold",
+    color: "#000000",
   },
+
   headerSpacer: {
     width: 27,
   },
+
   content: {
-    padding: 20,
+    flexGrow: 1,
+    paddingTop: 18,
     paddingBottom: 40,
-    gap: 14,
   },
+
   subtitle: {
-    color: "#6E6E73",
+    fontFamily: "Nunito-Regular",
+    color: "#777777",
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
+    marginBottom: 18,
   },
+
   formCard: {
-    padding: 17,
-    borderRadius: 18,
+    width: "100%",
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E5E5EA",
-    gap: 10,
+    borderColor: "#EEEEEE",
+    marginBottom: 25,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 7,
+    elevation: 3,
   },
+
   sectionTitle: {
-    color: "#111111",
-    fontSize: 17,
-    fontWeight: "700",
+    fontFamily: "Nunito-Bold",
+    fontSize: 18,
+    color: "#000000",
   },
-  label: {
-    color: "#3A3A3C",
-    fontSize: 13,
-    fontWeight: "600",
-    marginTop: 5,
-  },
+
   input: {
-    minHeight: 46,
-    paddingHorizontal: 13,
-    borderWidth: 1,
-    borderColor: "#D1D1D6",
-    borderRadius: 11,
-    color: "#111111",
-    fontSize: 15,
-    paddingVertical: 11,
+    height: 45,
+    borderBottomWidth: 2,
+    borderBottomColor: YELLOW,
+    fontSize: 16,
+    fontFamily: "Nunito-Regular",
+    color: "#000000",
+    paddingHorizontal: 0,
+    paddingBottom: 8,
+    marginTop: 15,
   },
+
   helperText: {
-    color: "#8E8E93",
+    fontFamily: "Nunito-Regular",
+    color: "#999999",
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 18,
+    marginTop: 10,
+    marginBottom: 8,
   },
+
   locationButton: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: "#B9D8FF",
-    borderRadius: 12,
-    backgroundColor: "#F2F8FF",
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 9,
-    paddingHorizontal: 12,
-    marginTop: 5,
+    borderWidth: 1,
+    borderColor: BLUE,
+    borderRadius: 32,
+    backgroundColor: "#FFFFFF",
+    marginTop: 15,
   },
+
   locationButtonText: {
-    color: BLUE,
+    fontFamily: "Nunito-SemiBold",
     fontSize: 14,
-    fontWeight: "600",
+    color: BLUE,
   },
+
   coordinates: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
-    padding: 12,
+    gap: 10,
+    padding: 13,
     backgroundColor: "#F0F9F1",
-    borderRadius: 11,
-    marginTop: 3,
+    borderRadius: 15,
+    marginTop: 14,
   },
+
   coordinatesInfo: {
     flex: 1,
     gap: 3,
   },
+
   coordinatesTitle: {
+    fontFamily: "Nunito-SemiBold",
     color: "#248A3D",
     fontSize: 13,
-    fontWeight: "600",
   },
+
   coordinatesText: {
-    color: "#3A3A3C",
+    fontFamily: "Nunito-Regular",
+    color: "#555555",
     fontSize: 12,
   },
+
   saveButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: BLUE,
+    height: 60,
+    backgroundColor: "#2E98FE",
+    borderRadius: 32,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    marginTop: 7,
-    paddingHorizontal: 12,
+    gap: 9,
+    marginTop: 20,
   },
+
   saveButtonText: {
+    fontFamily: "Nunito-SemiBold",
+    fontSize: 16,
     color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
   },
+
   disabled: {
     opacity: 0.55,
   },
+
   listHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 12,
+    marginBottom: 15,
   },
+
   count: {
-    minWidth: 28,
-    overflow: "hidden",
-    borderRadius: 12,
+    minWidth: 30,
+    height: 28,
+    borderRadius: 15,
+    backgroundColor: "#EAF5FF",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 9,
-    paddingVertical: 4,
-    backgroundColor: "#EAF3FF",
+  },
+
+  countText: {
+    fontFamily: "Nunito-Bold",
+    fontSize: 13,
     color: BLUE,
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: "600",
   },
+
   loader: {
-    marginTop: 24,
+    marginTop: 25,
   },
+
   empty: {
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 22,
     paddingVertical: 30,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E5E5EA",
-    borderRadius: 16,
+    borderColor: "#EEEEEE",
+    backgroundColor: "#FFFFFF",
     gap: 9,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
+
   emptyTitle: {
-    color: "#111111",
-    fontSize: 15,
-    fontWeight: "700",
+    fontFamily: "Nunito-Bold",
+    color: "#000000",
+    fontSize: 16,
     textAlign: "center",
   },
+
   emptyText: {
-    color: "#8E8E93",
+    fontFamily: "Nunito-Regular",
+    color: "#888888",
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center",
   },
+
   areaCard: {
+    minHeight: 85,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: 15,
+    gap: 13,
+    padding: 15,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E5E5EA",
+    borderColor: "#EEEEEE",
     backgroundColor: "#FFFFFF",
+    marginBottom: 12,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 2,
   },
+
   areaIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: "#EFF6FF",
+    width: 43,
+    height: 43,
+    borderRadius: 15,
+    backgroundColor: "#EAF5FF",
     alignItems: "center",
     justifyContent: "center",
   },
+
   areaInfo: {
     flex: 1,
     minWidth: 0,
     gap: 4,
   },
+
   areaName: {
-    color: "#111111",
-    fontSize: 14,
-    fontWeight: "700",
+    fontFamily: "Nunito-Bold",
+    color: "#000000",
+    fontSize: 15,
   },
+
   areaDetail: {
+    fontFamily: "Nunito-SemiBold",
     color: BLUE,
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
   },
+
   areaCoordinates: {
-    color: "#8E8E93",
+    fontFamily: "Nunito-Regular",
+    color: "#999999",
     fontSize: 11,
   },
 });

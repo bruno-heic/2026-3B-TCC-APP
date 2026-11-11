@@ -1,6 +1,6 @@
 import { AddDeviceProps } from "@/lib/types/types";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-export function AddcollarModal({
+export function AddCollarModal({
   visible,
   onAddCollar,
   onDoLater,

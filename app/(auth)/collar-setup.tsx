@@ -2,9 +2,11 @@ import {
   configurarWifiDaColeira,
   pedirPermissoes,
 } from "@/lib/actions/collar-actions";
+
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const AZUL = "#3498db";
@@ -80,10 +83,12 @@ export default function ConfigurarWifi() {
 
       setMensagem(MENSAGENS[status] ?? status);
 
+      // VERIFICA SE A COLEIRA FOI RECONHECIDA
       if (status !== "RECONHECIDA") {
         return;
       }
 
+      // VALIDA O ID DO PRODUTO
       if (
         idProduto === null ||
         idProduto === undefined ||
@@ -132,6 +137,7 @@ export default function ConfigurarWifi() {
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
+          {/* CABEÇALHO */}
           <View style={styles.hero}>
             <View style={styles.heroIcon}>
               <Ionicons name="wifi-outline" size={38} color={AZUL} />
@@ -145,14 +151,13 @@ export default function ConfigurarWifi() {
             </Text>
           </View>
 
+          {/* DADOS DA COLEIRA */}
           <View>
             <Text style={styles.sectionTitle}>Dados da coleira</Text>
 
             <Text style={styles.label}>Número de série</Text>
 
             <View style={styles.inputContainer}>
-              <Ionicons name="barcode-outline" size={20} color={CINZA} />
-
               <TextInput
                 placeholder="Ex.: PTF2BKGZMRC1"
                 placeholderTextColor="#AEAEB2"
@@ -170,15 +175,12 @@ export default function ConfigurarWifi() {
               Você encontra esse código na caixa do dispositivo.
             </Text>
 
+            {/* DADOS DO WI-FI */}
             <Text style={[styles.sectionTitle, styles.wifiTitle]}>
               Rede Wi-Fi
             </Text>
 
-            <Text style={styles.label}>Nome da rede</Text>
-
             <View style={styles.inputContainer}>
-              <Ionicons name="wifi-outline" size={20} color={CINZA} />
-
               <TextInput
                 placeholder="Nome da rede Wi-Fi"
                 placeholderTextColor="#AEAEB2"
@@ -192,11 +194,7 @@ export default function ConfigurarWifi() {
               />
             </View>
 
-            <Text style={styles.label}>Senha da rede</Text>
-
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color={CINZA} />
-
               <TextInput
                 placeholder="Senha do Wi-Fi"
                 placeholderTextColor="#AEAEB2"
@@ -216,6 +214,7 @@ export default function ConfigurarWifi() {
               />
             </View>
 
+            {/* AVISO SOBRE A REDE */}
             <View style={styles.infoBox}>
               <Ionicons
                 name="information-circle-outline"
@@ -229,6 +228,7 @@ export default function ConfigurarWifi() {
               </Text>
             </View>
 
+            {/* MENSAGEM DE STATUS */}
             {mensagem ? (
               <View style={[styles.statusBox, sucesso && styles.successBox]}>
                 {carregando ? (
@@ -304,22 +304,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+
   keyboardContainer: {
     flex: 1,
   },
+
   scrollView: {
     flex: 1,
   },
+
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
+
   hero: {
     alignItems: "center",
     paddingTop: 24,
     paddingBottom: 26,
   },
+
   heroIcon: {
     width: 78,
     height: 78,
@@ -329,12 +334,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 18,
   },
+
   title: {
     fontFamily: "Nunito-Bold",
     fontSize: 25,
     color: "#111111",
     textAlign: "center",
   },
+
   subtitle: {
     fontFamily: "Nunito-Regular",
     fontSize: 13,
@@ -344,21 +351,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
     maxWidth: 300,
   },
+
   sectionTitle: {
     fontFamily: "Nunito-Bold",
     fontSize: 18,
     color: "#111111",
     marginBottom: 16,
   },
+
   wifiTitle: {
     marginTop: 28,
   },
+
   label: {
     fontFamily: "Nunito-Bold",
     fontSize: 13,
     color: "#444444",
     marginBottom: 8,
   },
+
   inputContainer: {
     minHeight: 54,
     flexDirection: "row",
@@ -371,6 +382,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     marginBottom: 12,
   },
+
   input: {
     flex: 1,
     minHeight: 52,
@@ -378,6 +390,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111111",
   },
+
   helperText: {
     fontFamily: "Nunito-Regular",
     fontSize: 12,
@@ -385,6 +398,7 @@ const styles = StyleSheet.create({
     color: CINZA,
     marginTop: -4,
   },
+
   infoBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -394,6 +408,7 @@ const styles = StyleSheet.create({
     padding: 13,
     marginTop: 10,
   },
+
   infoText: {
     flex: 1,
     fontFamily: "Nunito-Regular",
@@ -401,6 +416,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: "#454545",
   },
+
   statusBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -410,9 +426,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0F6FF",
     marginTop: 16,
   },
+
   successBox: {
     backgroundColor: "#EFFAF1",
   },
+
   statusText: {
     flex: 1,
     fontFamily: "Nunito-Regular",
@@ -420,9 +438,12 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: "#245A9B",
   },
+
   successText: {
     color: "#248A3D",
   },
+
+  // BOTÃO PRINCIPAL
   primaryButton: {
     minHeight: 54,
     borderRadius: 32,
@@ -434,14 +455,17 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 16,
   },
+
   disabledButton: {
     opacity: 0.65,
   },
+
   primaryButtonText: {
     fontFamily: "Nunito-Bold",
     fontSize: 15,
     color: "#FFFFFF",
   },
+
   secondaryButton: {
     minHeight: 46,
     borderRadius: 32,
@@ -451,6 +475,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "#E5E5EA",
   },
+
   secondaryButtonText: {
     fontFamily: "Nunito-Bold",
     fontSize: 14,

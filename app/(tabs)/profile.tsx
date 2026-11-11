@@ -487,14 +487,16 @@ export default function Perfil() {
               },
             },
             {
-              icon: "options-outline",
-              label: "Preferências",
-              onPress: () => {},
-            },
-            {
               icon: "document-text-outline",
               label: "Termos de uso",
-              onPress: () => {},
+              onPress: () => {
+                router.push("/(profile)/termsOfUse");
+              },
+            },
+            {
+              icon: "ribbon-outline",
+              label: "Plano",
+              value: "SuperPet",
             },
           ]}
         />
