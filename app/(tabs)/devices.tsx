@@ -6,9 +6,11 @@ import { RequirePetsGate } from "@/components/RequirePetGate";
 import { usePetsContext } from "@/contexts/PetsContext";
 import { createPet, getUserPets } from "@/lib/actions/pet-actions";
 import { supabase } from "@/lib/supabase";
+import { CameraAoVivo } from "@/components/camera/CameraAoVivo";
+import { CameraSalva, carregarCamera } from "@/lib/camera/cameraSalva";
 import { Pet, PetFormData } from "@/lib/types/types";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -346,6 +348,26 @@ export default function Devices() {
     }
   };
 
+  const router = useRouter();
+  const [cameraSalva, setCameraSalva] = useState<CameraSalva | null>(null);
+
+  // Recarrega a câmera salva toda vez que a aba abre (inclusive ao voltar da tela de conexão).
+  useFocusEffect(
+    useCallback(() => {
+      let ativo = true;
+      carregarCamera().then((camera) => {
+        if (ativo) setCameraSalva(camera);
+      });
+      return () => {
+        ativo = false;
+      };
+    }, []),
+  );
+
+  const handleConectarCamera = () => {
+    router.push("/(camera)/marcas");
+  };
+
   const handleCamera = () => {
     Alert.alert(
       "Em breve",
@@ -507,59 +529,69 @@ export default function Devices() {
                 <View style={styles.card}>
                   <Text style={styles.cardTitulo}>Câmera ao vivo</Text>
 
-                  <Text style={styles.cardDescricao}>
-                    A conexão com câmeras compatíveis é uma função extra da
-                    Petifi que fará um melhor monitoramento!
-                  </Text>
+                  {cameraSalva ? (
+                    <CameraAoVivo
+                      dados={cameraSalva}
+                      onTrocar={() => setCameraSalva(null)}
+                    />
+                  ) : (
+                    <>
 
-                  <View style={styles.cameraRow}>
-                    <View
-                      style={[styles.cameraBox, { backgroundColor: "#FFF6D6" }]}
-                    >
-                      <Text style={styles.cameraTexto}>
-                        Tenho uma câmera compatível!
+                      <Text style={styles.cardDescricao}>
+                        A conexão com câmeras compatíveis é uma função extra da
+                        Petifi que fará um melhor monitoramento!
                       </Text>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.cameraBotao,
-                          { backgroundColor: "#2E98FE" },
-                        ]}
-                        onPress={handleCamera}
-                      >
-                        <Text
-                          style={[styles.cameraBotaoTexto, { color: "#fff" }]}
+                      <View style={styles.cameraRow}>
+                        <View
+                          style={[styles.cameraBox, { backgroundColor: "#FFF6D6" }]}
                         >
-                          Conectar
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                          <Text style={styles.cameraTexto}>
+                            Tenho uma câmera compatível!
+                          </Text>
 
-                    <View
-                      style={[styles.cameraBox, { backgroundColor: "#CFE5F7" }]}
-                    >
-                      <Text style={styles.cameraTexto}>
-                        Quero uma câmera para monitoramento
-                      </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.cameraBotao,
+                              { backgroundColor: "#2E98FE" },
+                            ]}
+                            onPress={handleConectarCamera}
+                          >
+                            <Text
+                              style={[styles.cameraBotaoTexto, { color: "#fff" }]}
+                            >
+                              Conectar
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.cameraBotao,
-                          { backgroundColor: "#FFD84D" },
-                        ]}
-                        onPress={handleCamera}
-                      >
-                        <Text
-                          style={[
-                            styles.cameraBotaoTexto,
-                            { color: "#003C75" },
-                          ]}
+                        <View
+                          style={[styles.cameraBox, { backgroundColor: "#CFE5F7" }]}
                         >
-                          Compre já!
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                          <Text style={styles.cameraTexto}>
+                            Quero uma câmera para monitoramento
+                          </Text>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.cameraBotao,
+                              { backgroundColor: "#FFD84D" },
+                            ]}
+                            onPress={handleCamera}
+                          >
+                            <Text
+                              style={[
+                                styles.cameraBotaoTexto,
+                                { color: "#003C75" },
+                              ]}
+                            >
+                              Compre já!
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </>
+                  )}
                 </View>
               </>
             )}

@@ -59,12 +59,29 @@
           "locationWhenInUsePermission": "Permita que o aplicativo use sua localização para cadastrar áreas seguras do seu pet."
         }
       ],
-      ["expo-notifications"],
+      [
+        "expo-notifications"
+      ],
       "expo-font",
       "expo-sqlite",
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26,
+            "packagingOptions": {
+              "pickFirst": [
+                "**/libc++_shared.so"
+              ]
+            }
+          }
+        }
+      ],
+      "./plugins/withVlcGradleFix",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

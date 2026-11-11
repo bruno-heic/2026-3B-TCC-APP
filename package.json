@@ -21,6 +21,7 @@
     "base64-arraybuffer": "^1.0.2",
     "buffer": "^6.0.3",
     "expo": "~57.0.32",
+    "expo-build-properties": "~57.0.23",
     "expo-constants": "~57.0.22",
     "expo-dev-client": "~57.0.21",
     "expo-device": "~57.0.2",
@@ -34,6 +35,7 @@
     "expo-location": "~57.0.23",
     "expo-notifications": "~57.0.25",
     "expo-router": "~57.0.30",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.11",
     "expo-sqlite": "~57.0.4",
     "expo-status-bar": "~57.0.1",
@@ -52,6 +54,7 @@
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
     "react-native-url-polyfill": "^4.0.0",
+    "react-native-vlc-media-player": "^1.0.98",
     "react-native-web": "~0.21.0",
     "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.1"
