@@ -1,12 +1,20 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  acceptTerms,
+  getTermsAcceptance,
+  TERMS_VERSION,
+  TermsAcceptance,
+} from "@/lib/onboarding";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const colors = {
@@ -20,7 +28,7 @@ const colors = {
 };
 
 const ULTIMA_ATUALIZACAO = "26/10/2026";
-const VERSAO = "2.0";
+const VERSAO = TERMS_VERSION;
 
 /*
   Como o texto está organizado:
@@ -33,12 +41,6 @@ type Bloco = string | { sub: string } | { lista: string[] };
 type Secao = {
   titulo: string;
   blocos: Bloco[];
-};
-
-type Props = {
-  navigation: {
-    reset: (state: { index: number; routes: { name: string }[] }) => void;
-  };
 };
 
 const SECOES: Secao[] = [
@@ -223,16 +225,61 @@ function BlocoView({ bloco }: { bloco: Bloco }) {
   );
 }
 
-export default function TermosDeUso({ navigation }: Props) {
-  const [aceitou, setAceitou] = useState<boolean>(false);
+export default function TermosDeUso() {
+  const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const vindoDoCadastro = from === "onboarding";
 
-  function handleAceitar() {
+  const [aceitou, setAceitou] = useState<boolean>(false);
+  const [aceiteSalvo, setAceiteSalvo] = useState<TermsAcceptance | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+
+  // Se o tutor já aceitou esta versão dos termos, não pedimos de novo.
+  useEffect(() => {
+    let vivo = true;
+
+    getTermsAcceptance().then((aceite) => {
+      if (!vivo) return;
+
+      if (aceite && vindoDoCadastro) {
+        router.replace("/(tabs)/home");
+        return;
+      }
+
+      setAceiteSalvo(aceite);
+      setCarregando(false);
+    });
+
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  async function handleAceitar() {
     if (!aceitou) {
       Alert.alert("Atenção", "Aceite os termos para prosseguir!");
       return;
     }
 
-    navigation.reset({ index: 0, routes: [{ name: "home" }] });
+    setSalvando(true);
+    const salvo = await acceptTerms();
+    setSalvando(false);
+
+    if (!salvo) {
+      Alert.alert(
+        "Atenção",
+        "Não foi possível salvar o seu aceite. Tente novamente.",
+      );
+      return;
+    }
+
+    router.replace(vindoDoCadastro ? "/(tabs)/home" : "/(tabs)/profile");
+  }
+
+  function handleVoltar() {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/profile");
   }
 
   return (
@@ -254,30 +301,53 @@ export default function TermosDeUso({ navigation }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.checkboxRow}
-          onPress={() => setAceitou(!aceitou)}
-        >
-          <View style={[styles.checkbox, aceitou && styles.checkboxChecked]}>
-            {aceitou && (
-              <Ionicons name="checkmark" size={14} color={colors.white} />
-            )}
-          </View>
-          <Text style={styles.checkboxLabel}>
-            Li e concordo com os Termos de uso e Diretrizes
-          </Text>
-        </TouchableOpacity>
+        {carregando ? (
+          <ActivityIndicator color={colors.primary} />
+        ) : aceiteSalvo ? (
+          <>
+            <Text style={styles.acceptedText}>
+              Você aceitou estes termos em{" "}
+              {new Date(aceiteSalvo.acceptedAt).toLocaleDateString("pt-BR")}.
+            </Text>
 
-        <TouchableOpacity
-          style={[styles.button, !aceitou && styles.buttonDisabled]}
-          onPress={handleAceitar}
-        >
-          <Text
-            style={[styles.buttonText, !aceitou && styles.buttonTextDisabled]}
-          >
-            Aceitar e continuar
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handleVoltar}>
+              <Text style={styles.buttonText}>Voltar</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setAceitou(!aceitou)}
+            >
+              <View
+                style={[styles.checkbox, aceitou && styles.checkboxChecked]}
+              >
+                {aceitou && (
+                  <Ionicons name="checkmark" size={14} color={colors.white} />
+                )}
+              </View>
+              <Text style={styles.checkboxLabel}>
+                Li e concordo com os Termos de uso e Diretrizes
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, !aceitou && styles.buttonDisabled]}
+              onPress={handleAceitar}
+              disabled={salvando}
+            >
+              <Text
+                style={[
+                  styles.buttonText,
+                  !aceitou && styles.buttonTextDisabled,
+                ]}
+              >
+                {salvando ? "Salvando..." : "Aceitar e continuar"}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
@@ -343,6 +413,12 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  acceptedText: {
+    fontSize: 13,
+    color: colors.textLight,
+    textAlign: "center",
+    marginBottom: 14,
   },
   checkboxRow: {
     flexDirection: "row",

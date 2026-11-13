@@ -16,6 +16,7 @@ import {
   Nunito_900Black,
 } from "@expo-google-fonts/nunito";
 
+import { isOnboardingDone, ONBOARDING_ROUTE } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 
 export default function RootLayout() {
@@ -75,6 +76,12 @@ export default function RootLayout() {
       router.replace("/(tabs)/home");
     } else if (!session && !inAuthGroup) {
       router.replace("/(auth)/sign-in");
+    } else if (session && segmentsArray[0] === "(tabs)") {
+      // Quem ainda não concluiu o fluxo pós-cadastro (Funcionalidades -> Planos
+      // -> Termos), por exemplo por ter fechado o app no meio, volta para ele.
+      isOnboardingDone().then((done) => {
+        if (!done) router.replace(ONBOARDING_ROUTE);
+      });
     }
   }, [session, segments, sessionLoading]);
 

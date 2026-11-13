@@ -22,6 +22,7 @@ import {
   handleLogout,
   updateUserField,
 } from "@/lib/actions/user-actions";
+import { getPlan, PLAN_LABEL, PlanId } from "@/lib/onboarding";
 import { Pet, PetFormData } from "@/lib/types/types";
 import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect } from "expo-router";
@@ -30,6 +31,7 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -57,6 +59,7 @@ export default function Perfil() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
+  const [plano, setPlano] = useState<PlanId>("basic");
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [alertRuleModalVisible, setAlertRuleModalVisible] = useState(false);
   const [editingField, setEditingField] = useState<EditableField | null>(null);
@@ -133,6 +136,7 @@ export default function Perfil() {
     useCallback(() => {
       carregarUsuario();
       carregarPets(true);
+      getPlan().then(setPlano);
     }, [carregarUsuario, carregarPets]),
   );
 
@@ -496,7 +500,13 @@ export default function Perfil() {
             {
               icon: "ribbon-outline",
               label: "Plano",
-              value: "SuperPet",
+              value: PLAN_LABEL[plano],
+              onPress: () => {
+                router.push({
+                  pathname: "/(onboarding)/plans",
+                  params: { from: "profile" },
+                });
+              },
             },
           ]}
         />
@@ -507,7 +517,19 @@ export default function Perfil() {
             {
               icon: "chatbubble-ellipses-outline",
               label: "Fale conosco",
-              onPress: () => {},
+              onPress: async () => {
+                const email = "petify.it@gmail.com";
+                const url = `mailto:${email}`;
+
+                try {
+                  await Linking.openURL(url);
+                } catch {
+                  Alert.alert(
+                    "Erro",
+                    "Não foi possível abrir o aplicativo de e-mail.",
+                  );
+                }
+              },
             },
             {
               icon: "information-circle-outline",

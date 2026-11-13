@@ -1,6 +1,7 @@
 import { AddCollarModal } from "@/components/AddCollarForm";
 import { SucessSignUserModal } from "@/components/sucessSignUser";
 import { handleSignUser } from "@/lib/actions/user-actions";
+import { ONBOARDING_ROUTE } from "@/lib/onboarding";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -101,7 +102,7 @@ export default function SignUp() {
 
   const handleAddDeviceLater = () => {
     setAddDeviceVisible(false);
-    router.replace("/(tabs)/home");
+    router.replace(ONBOARDING_ROUTE);
   };
 
   return (

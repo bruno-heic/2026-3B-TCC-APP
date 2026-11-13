@@ -1,4 +1,5 @@
 import { AddDeviceModal } from "@/components/AddCollarModal";
+import { CameraGerenciar } from "@/components/camera/CameraGerenciar";
 import { ManageDeviceModal } from "@/components/EditDeviceModal";
 import { SafeAreasModal } from "@/components/SafeAreasModal";
 import {
@@ -248,16 +249,19 @@ export default function ManageDevicesScreen() {
           </Text>
 
           <Pressable
-            style={[styles.addButton, isCamera && styles.addButtonDisabled]}
-            onPress={isCamera ? undefined : adicionarDispositivo}
-            disabled={isCamera}
+            style={styles.addButton}
+            onPress={
+              isCamera
+                ? () => router.push("/(camera)/marcas")
+                : adicionarDispositivo
+            }
             accessibilityRole="button"
             accessibilityLabel={
-              isCamera ? "Câmera em breve" : `Adicionar ${nome}`
+              isCamera ? "Conectar câmera" : `Adicionar ${nome}`
             }
           >
             <Text style={styles.addButtonText}>
-              {isCamera ? "Em breve" : "Adicionar"}
+              {isCamera ? "Conectar" : "Adicionar"}
             </Text>
 
             {!isCamera && <Ionicons name="add" size={16} color="#FFFFFF" />}
@@ -378,7 +382,7 @@ export default function ManageDevicesScreen() {
 
           <View style={styles.addSectionHeader}>
             <View style={styles.addSectionText}>
-              <Text style={styles.sectionTitle}>Adicionar dispositivos</Text>
+              <Text style={styles.sectionTitle}>Adicionar coleira</Text>
 
               <Text style={styles.addSectionSubtitle}>
                 Cadastre uma coleira usando seu número de série.
@@ -390,7 +394,7 @@ export default function ManageDevicesScreen() {
             style={styles.primaryAddButton}
             onPress={adicionarDispositivo}
             accessibilityRole="button"
-            accessibilityLabel="Adicionar novo dispositivo"
+            accessibilityLabel="Adicionar nova coleira ou pingente"
           >
             <View style={styles.primaryAddIcon}>
               <Ionicons name="add" size={25} color={BLUE} />
@@ -406,6 +410,12 @@ export default function ManageDevicesScreen() {
 
             <Ionicons name="chevron-forward" size={20} color="#8A8A8E" />
           </Pressable>
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Câmera</Text>
+          </View>
+
+          <CameraGerenciar />
 
           {!carregando && produtos.length > 0 && (
             <>
