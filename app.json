@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "2026-3B-TCC-APP",
-    "slug": "2026-3B-TCC-APP",
+    "name": "Petify",
+    "slug": "Petify",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -59,9 +59,7 @@
           "locationWhenInUsePermission": "Permita que o aplicativo use sua localização para cadastrar áreas seguras do seu pet."
         }
       ],
-      [
-        "expo-notifications"
-      ],
+      ["expo-notifications"],
       "expo-font",
       "expo-sqlite",
       "expo-image",
@@ -73,9 +71,7 @@
           "android": {
             "minSdkVersion": 26,
             "packagingOptions": {
-              "pickFirst": [
-                "**/libc++_shared.so"
-              ]
+              "pickFirst": ["**/libc++_shared.so"]
             }
           }
         }
