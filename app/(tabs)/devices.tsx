@@ -360,7 +360,10 @@ export default function Devices() {
   return (
     <View style={styles.tela}>
       <RequirePetsGate onAddPet={() => setPetModalVisible(true)}>
-        <RequireDeviceGate onAddDevice={() => setDeviceModalVisible(true)}>
+        <RequireDeviceGate
+          onAddDevice={() => setDeviceModalVisible(true)}
+          extra={<CameraCard />}
+        >
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
@@ -497,7 +500,6 @@ export default function Devices() {
                   )}
                 </View>
 
-                {/* Câmera ao vivo */}
                 <CameraCard />
               </>
             )}

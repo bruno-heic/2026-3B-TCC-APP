@@ -22,15 +22,15 @@ export function NoDeviceView({ onAddDevice, extra }: NoDeviceViewProps) {
         <Ionicons name="paw-outline" size={40} color="#2E98FE" />
       </View>
 
-      <Text style={styles.title}>Você não tem um um dispositivo conectado</Text>
+      <Text style={styles.title}>Você não tem uma coleira conectada</Text>
 
       <Text style={styles.subtitle}>
-        Adicione um dispositivo para acompanhar os dados do pet no app.
+        Adicione uma coleira para acompanhar os dados do pet no app.
       </Text>
 
       <TouchableOpacity style={styles.button} onPress={onAddDevice}>
         <Ionicons name="add" size={20} color="#fff" />
-        <Text style={styles.buttonText}>Adicionar Dispositivo</Text>
+        <Text style={styles.buttonText}>Adicionar coleira</Text>
       </TouchableOpacity>
 
       {extra ? <View style={styles.extra}>{extra}</View> : null}
@@ -45,6 +45,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 40,
     paddingVertical: 60,
+    paddingBottom: 120,
     backgroundColor: "#fff",
   },
 

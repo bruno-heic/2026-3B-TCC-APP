@@ -1,4 +1,5 @@
 import { AddPetModal } from "@/components/AddPetModal";
+import { CameraCard } from "@/components/camera/CameraCard";
 import { RequirePetsGate } from "@/components/RequirePetGate";
 import { usePetsContext } from "@/contexts/PetsContext";
 import { createPet, getUserPets } from "@/lib/actions/pet-actions";
@@ -538,6 +539,9 @@ export default function Home() {
                       ))}
                     </View>
                   )}
+
+                  {/* Câmera: funciona sem coleira, só precisa de um pet */}
+                  <CameraCard resumo nomePet={petAtivo.nome} />
                 </>
               )}
             </ScrollView>

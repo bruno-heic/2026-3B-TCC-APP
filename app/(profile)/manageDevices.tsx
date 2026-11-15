@@ -1,14 +1,20 @@
 import { AddDeviceModal } from "@/components/AddCollarModal";
-import { CameraGerenciar } from "@/components/camera/CameraGerenciar";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { ManageDeviceModal } from "@/components/EditDeviceModal";
 import { SafeAreasModal } from "@/components/SafeAreasModal";
 import {
-  getAvailableProducts,
+  deleteCollarDevice,
   getCollars,
   type CollarDevice,
 } from "@/lib/actions/collar-actions";
 import { getUserPets } from "@/lib/actions/pet-actions";
 import { getUser } from "@/lib/actions/user-actions";
+import {
+  carregarCamera,
+  esquecerCamera,
+  type CameraSalva,
+} from "@/lib/camera/cameraSalva";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -22,7 +28,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -33,12 +38,16 @@ type Pet = {
   raca?: string | null;
 };
 
-type Product = Record<string, any> & {
-  id_produto: number;
-};
+// O que está sendo removido (abre o card de confirmação).
+type Remocao =
+  | { tipo: "coleira"; dispositivo: CollarDevice }
+  | { tipo: "camera" };
 
 const BLUE = "#007AFF";
 const DARK_BLUE = "#004B91";
+
+// Mesmo critério da aba Dispositivos: sinal recente = coleira ativa.
+const SINAL_ATIVO_MS = 5 * 60 * 1000;
 
 const COLEIRA_IMAGE = require("@/assets/images/Coleiraimg.png");
 const CAMERA_IMAGE = require("@/assets/images/Cameraimg.png");
@@ -74,14 +83,69 @@ function getDeviceImage(type: string) {
   return type.includes("camera") ? CAMERA_IMAGE : COLEIRA_IMAGE;
 }
 
-export default function ManageDevicesScreen() {
-  const { width } = useWindowDimensions();
-  const compacto = width < 360;
+// "Coleira CR399": nome escolhido pelo tutor ou, se não houver, o do produto.
+function getNomeColeira(dispositivo: CollarDevice) {
+  const personalizado = dispositivo.nome_personalizado?.trim();
+  if (personalizado) return personalizado;
 
+  const produto = dispositivo.produto;
+  const modelo = String(getProductName(produto));
+  const tipo = getProductType(produto);
+
+  if (modelo === "Dispositivo") return "Coleira";
+  if (tipo.includes("pingente") || modelo.toLowerCase().includes("coleira")) {
+    return modelo;
+  }
+
+  return `Coleira ${modelo}`;
+}
+
+// Só aparece se o banco trouxer o nível de bateria da coleira.
+function getBateria(dispositivo: CollarDevice): number | null {
+  const bruto = dispositivo.bateria ?? dispositivo.nivel_bateria;
+
+  if (bruto === null || bruto === undefined || bruto === "") return null;
+
+  const valor = Number(bruto);
+
+  return Number.isFinite(valor) ? Math.round(valor) : null;
+}
+
+// Coleira "Ativa" = enviou localização nos últimos minutos.
+async function buscarSinais(lista: CollarDevice[]) {
+  const entradas = await Promise.all(
+    lista.map(async (dispositivo) => {
+      try {
+        const { data } = await supabase
+          .from("localizacao")
+          .select("data_hora")
+          .eq("id_dispositivo", dispositivo.id_dispositivo)
+          .order("data_hora", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const momento = data?.data_hora
+          ? new Date(data.data_hora).getTime()
+          : NaN;
+        const idade = Date.now() - momento;
+        const ativa =
+          Number.isFinite(momento) && idade >= 0 && idade < SINAL_ATIVO_MS;
+
+        return [dispositivo.id_dispositivo, ativa] as const;
+      } catch {
+        return [dispositivo.id_dispositivo, false] as const;
+      }
+    }),
+  );
+
+  return Object.fromEntries(entradas) as Record<number, boolean>;
+}
+
+export default function ManageDevicesScreen() {
   const [pets, setPets] = useState<Pet[]>([]);
-  const [petSelecionado, setPetSelecionado] = useState<number | null>(null);
   const [dispositivos, setDispositivos] = useState<CollarDevice[]>([]);
-  const [produtos, setProdutos] = useState<Product[]>([]);
+  const [sinais, setSinais] = useState<Record<number, boolean>>({});
+  const [camera, setCamera] = useState<CameraSalva | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
 
@@ -89,6 +153,7 @@ export default function ManageDevicesScreen() {
   const [dispositivoEmEdicao, setDispositivoEmEdicao] =
     useState<CollarDevice | null>(null);
   const [petAreas, setPetAreas] = useState<Pet | null>(null);
+  const [remocao, setRemocao] = useState<Remocao | null>(null);
 
   const carregarDados = useCallback(async (refresh = false) => {
     try {
@@ -106,12 +171,10 @@ export default function ManageDevicesScreen() {
 
       const usuarioId = resultadoUsuario.user.id_usuario;
 
-      const [resultadoPets, resultadoDispositivos, resultadoProdutos] =
-        await Promise.all([
-          getUserPets(usuarioId),
-          getCollars(usuarioId),
-          getAvailableProducts(usuarioId),
-        ]);
+      const [resultadoPets, resultadoDispositivos] = await Promise.all([
+        getUserPets(usuarioId),
+        getCollars(usuarioId),
+      ]);
 
       if (!resultadoPets.sucess) {
         throw new Error(
@@ -126,15 +189,11 @@ export default function ManageDevicesScreen() {
         );
       }
 
-      if (!resultadoProdutos.sucess) {
-        throw new Error(
-          resultadoProdutos.error || "Não foi possível carregar os produtos.",
-        );
-      }
+      const lista = resultadoDispositivos.collars ?? [];
 
       setPets((resultadoPets.pets ?? []) as Pet[]);
-      setDispositivos(resultadoDispositivos.collars ?? []);
-      setProdutos((resultadoProdutos.products ?? []) as Product[]);
+      setDispositivos(lista);
+      setSinais(await buscarSinais(lista));
     } catch (error) {
       console.error("Erro ao carregar dispositivos:", error);
 
@@ -156,29 +215,83 @@ export default function ManageDevicesScreen() {
     }, [carregarDados]),
   );
 
-  const dispositivosFiltrados =
-    petSelecionado === null
-      ? dispositivos
-      : dispositivos.filter(
-          (dispositivo) => dispositivo.id_pet === petSelecionado,
-        );
+  // A câmera fica salva no celular e não depende de pet nem de coleira,
+  // por isso é carregada à parte (funciona mesmo se a busca acima falhar).
+  useFocusEffect(
+    useCallback(() => {
+      let ativo = true;
 
-  function adicionarDispositivo() {
-    setAdicionarModalVisivel(true);
+      carregarCamera().then((salva) => {
+        if (ativo) setCamera(salva);
+      });
+
+      return () => {
+        ativo = false;
+      };
+    }, []),
+  );
+
+  async function confirmarRemocao() {
+    const alvo = remocao;
+
+    if (!alvo) return;
+
+    if (alvo.tipo === "camera") {
+      await esquecerCamera();
+      setCamera(null);
+      setRemocao(null);
+      return;
+    }
+
+    const resultado = await deleteCollarDevice(alvo.dispositivo.id_dispositivo);
+
+    setRemocao(null);
+
+    if (!resultado.sucess) {
+      Alert.alert("Erro ao remover", resultado.error);
+      return;
+    }
+
+    void carregarDados(true);
   }
 
-  function renderDeviceCard(dispositivo: CollarDevice) {
-    const produto = dispositivo.produto;
-    const tipo = getProductType(produto);
+  const configRemocao =
+    remocao?.tipo === "camera"
+      ? {
+          title: "Remover câmera",
+          message:
+            "A câmera será esquecida neste celular. Você pode conectar de novo quando quiser.",
+        }
+      : {
+          title: "Remover coleira",
+          message:
+            "A coleira será desvinculada da sua conta. O produto e seu histórico de ativação não serão apagados.",
+        };
 
-    const nome =
-      dispositivo.nome_personalizado?.trim() || getProductName(produto);
-
-    const pet = pets.find((item) => item.id_pet === dispositivo.id_pet);
-
+  function renderRemoveButton(label: string, onPress: () => void) {
     return (
       <Pressable
-        key={dispositivo.id_dispositivo}
+        style={styles.removeButton}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+        <Text style={styles.removeButtonText}>Remover</Text>
+        <Ionicons name="remove" size={16} color="#FFFFFF" />
+      </Pressable>
+    );
+  }
+
+  function renderColeira(dispositivo: CollarDevice) {
+    const tipo = getProductType(dispositivo.produto);
+    const nome = getNomeColeira(dispositivo);
+    const ativa = sinais[dispositivo.id_dispositivo] === true;
+    const bateria = getBateria(dispositivo);
+
+    // Tocar no card abre o gerenciamento (nome, pet e áreas seguras).
+    return (
+      <Pressable
+        key={`coleira-${dispositivo.id_dispositivo}`}
         style={styles.deviceCard}
         onPress={() => setDispositivoEmEdicao(dispositivo)}
         accessibilityRole="button"
@@ -197,39 +310,77 @@ export default function ManageDevicesScreen() {
             {nome}
           </Text>
 
-          <Text style={styles.deviceModel} numberOfLines={1}>
-            {getProductName(produto)}
-          </Text>
-
           <View style={styles.statusRow}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Cadastrado</Text>
+            <View
+              style={[styles.statusDot, !ativa && styles.statusDotInativo]}
+            />
+            <Text
+              style={[styles.statusText, !ativa && styles.statusTextInativo]}
+            >
+              {ativa ? "Ativa" : "Sem sinal"}
+            </Text>
           </View>
 
-          {pet ? (
-            <Text style={styles.petCaption} numberOfLines={1}>
-              Pet: {pet.nome}
-            </Text>
+          {bateria !== null ? (
+            <View style={styles.bateriaRow}>
+              <Text style={styles.deviceModel}>Bateria: {bateria}%</Text>
+              <Ionicons name="battery-half" size={13} color="#8A8A8E" />
+            </View>
           ) : null}
-        </View>
 
-        <View style={styles.detailsButton}>
-          <Ionicons name="chevron-forward" size={19} color="#8A8A8E" />
+          {renderRemoveButton(`Remover ${nome}`, () =>
+            setRemocao({ tipo: "coleira", dispositivo }),
+          )}
         </View>
       </Pressable>
     );
   }
 
-  function renderProductCard(produto: Product) {
-    const tipo = getProductType(produto);
-    const nome = getProductName(produto);
-    const isCamera = tipo.includes("camera");
-
+  function renderCamera(salva: CameraSalva) {
     return (
-      <View key={produto.id_produto} style={styles.addCard}>
+      <View key="camera" style={styles.deviceCard}>
+        <View style={styles.deviceImageArea}>
+          <Image
+            source={CAMERA_IMAGE}
+            style={styles.deviceImage}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View style={styles.deviceInfo}>
+          <Text style={styles.deviceName} numberOfLines={2}>
+            Câmera
+          </Text>
+
+          <Text style={styles.deviceModel} numberOfLines={1}>
+            {salva.nome} • {salva.ip}
+          </Text>
+
+          <View style={styles.statusRow}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>Conectada</Text>
+          </View>
+
+          {renderRemoveButton("Remover câmera", () =>
+            setRemocao({ tipo: "camera" }),
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  function renderAddCard(
+    chave: string,
+    imagem: any,
+    nome: string,
+    subtitulo: string,
+    onPress: () => void,
+  ) {
+    return (
+      <View key={chave} style={styles.addCard}>
         <View style={styles.productImageArea}>
           <Image
-            source={getDeviceImage(tipo)}
+            source={imagem}
             style={styles.productImage}
             resizeMode="contain"
           />
@@ -241,35 +392,24 @@ export default function ManageDevicesScreen() {
           </Text>
 
           <Text style={styles.addSubtitle} numberOfLines={2}>
-            {isCamera
-              ? "Monitore seu pet de onde estiver"
-              : tipo.includes("pingente")
-                ? "Acompanhe seu pet com tecnologia"
-                : "Monitore mais de um pet"}
+            {subtitulo}
           </Text>
 
           <Pressable
             style={styles.addButton}
-            onPress={
-              isCamera
-                ? () => router.push("/(camera)/marcas")
-                : adicionarDispositivo
-            }
+            onPress={onPress}
             accessibilityRole="button"
-            accessibilityLabel={
-              isCamera ? "Conectar câmera" : `Adicionar ${nome}`
-            }
+            accessibilityLabel={`Adicionar ${nome}`}
           >
-            <Text style={styles.addButtonText}>
-              {isCamera ? "Conectar" : "Adicionar"}
-            </Text>
-
-            {!isCamera && <Ionicons name="add" size={16} color="#FFFFFF" />}
+            <Text style={styles.addButtonText}>Adicionar</Text>
+            <Ionicons name="add" size={16} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>
     );
   }
+
+  const nenhumDispositivo = !carregando && dispositivos.length === 0 && !camera;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -298,73 +438,16 @@ export default function ManageDevicesScreen() {
             <Text style={styles.headerTitle}>Gerenciar dispositivos</Text>
           </View>
 
-          {pets.length > 1 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterList}
-            >
-              <Pressable
-                style={[
-                  styles.filterChip,
-                  petSelecionado === null && styles.filterChipSelected,
-                ]}
-                onPress={() => setPetSelecionado(null)}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    petSelecionado === null && styles.filterTextSelected,
-                  ]}
-                >
-                  Todos
-                </Text>
-              </Pressable>
-
-              {pets.map((pet) => {
-                const selecionado = petSelecionado === pet.id_pet;
-
-                return (
-                  <Pressable
-                    key={pet.id_pet}
-                    style={[
-                      styles.filterChip,
-                      selecionado && styles.filterChipSelected,
-                    ]}
-                    onPress={() => setPetSelecionado(pet.id_pet)}
-                  >
-                    <Text
-                      style={[
-                        styles.filterText,
-                        selecionado && styles.filterTextSelected,
-                      ]}
-                    >
-                      {pet.nome}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
-
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Dispositivos conectados</Text>
-
-            <Text style={styles.sectionCount}>
-              {dispositivosFiltrados.length}
-            </Text>
           </View>
 
-          {carregando ? (
+          {carregando && !camera ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={BLUE} />
               <Text style={styles.loadingText}>Carregando dispositivos...</Text>
             </View>
-          ) : dispositivosFiltrados.length > 0 ? (
-            <View style={styles.cardList}>
-              {dispositivosFiltrados.map(renderDeviceCard)}
-            </View>
-          ) : (
+          ) : nenhumDispositivo ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIcon}>
                 <Ionicons name="hardware-chip-outline" size={30} color={BLUE} />
@@ -375,81 +458,40 @@ export default function ManageDevicesScreen() {
               </Text>
 
               <Text style={styles.emptySubtitle}>
-                Os dispositivos vinculados aos seus pets aparecerão aqui.
+                Os dispositivos conectados aparecerão aqui.
               </Text>
+            </View>
+          ) : (
+            <View style={styles.cardList}>
+              {dispositivos.map(renderColeira)}
+              {camera ? renderCamera(camera) : null}
             </View>
           )}
 
-          <View style={styles.addSectionHeader}>
-            <View style={styles.addSectionText}>
-              <Text style={styles.sectionTitle}>Adicionar coleira</Text>
-
-              <Text style={styles.addSectionSubtitle}>
-                Cadastre uma coleira usando seu número de série.
-              </Text>
-            </View>
+          <View style={[styles.sectionHeader, styles.addSectionHeader]}>
+            <Text style={styles.sectionTitle}>Adicionar dispositivos</Text>
           </View>
 
-          <Pressable
-            style={styles.primaryAddButton}
-            onPress={adicionarDispositivo}
-            accessibilityRole="button"
-            accessibilityLabel="Adicionar nova coleira ou pingente"
-          >
-            <View style={styles.primaryAddIcon}>
-              <Ionicons name="add" size={25} color={BLUE} />
-            </View>
+          <View style={styles.cardList}>
+            {renderAddCard(
+              "add-coleira",
+              COLEIRA_IMAGE,
+              "Coleira",
+              "Monitore mais de um pet",
+              () => setAdicionarModalVisivel(true),
+            )}
 
-            <View style={styles.primaryAddInfo}>
-              <Text style={styles.primaryAddTitle}>Adicionar dispositivo</Text>
-
-              <Text style={styles.primaryAddSubtitle}>
-                Informar número de série e escolher pet
-              </Text>
-            </View>
-
-            <Ionicons name="chevron-forward" size={20} color="#8A8A8E" />
-          </Pressable>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Câmera</Text>
+            {/* Só uma câmera por celular: depois de conectada, remova para trocar. */}
+            {!camera
+              ? renderAddCard(
+                  "add-camera",
+                  CAMERA_IMAGE,
+                  "Câmera",
+                  "Monitore seu pet de outro ângulo!",
+                  () => router.push("/(camera)/marcas"),
+                )
+              : null}
           </View>
-
-          <CameraGerenciar />
-
-          {!carregando && produtos.length > 0 && (
-            <>
-              <Text style={styles.catalogTitle}>Produtos disponíveis</Text>
-
-              <View style={styles.cardList}>
-                {produtos.map(renderProductCard)}
-              </View>
-            </>
-          )}
-
-          {!carregando && produtos.length === 0 && (
-            <View style={styles.noProductsCard}>
-              <Ionicons
-                name="information-circle-outline"
-                size={22}
-                color="#8A8A8E"
-              />
-
-              <Text style={styles.noProductsText}>
-                Não há outros produtos no catálogo. Você ainda pode adicionar
-                uma coleira informando seu número de série.
-              </Text>
-            </View>
-          )}
-
-          <Pressable
-            style={styles.refreshButton}
-            onPress={() => void carregarDados(true)}
-            disabled={atualizando}
-          >
-            <Ionicons name="refresh-outline" size={17} color={BLUE} />
-            <Text style={styles.refreshButtonText}>Atualizar dispositivos</Text>
-          </Pressable>
         </View>
       </ScrollView>
 
@@ -459,10 +501,6 @@ export default function ManageDevicesScreen() {
         pets={pets}
         onClose={() => setDispositivoEmEdicao(null)}
         onSaved={() => {
-          setDispositivoEmEdicao(null);
-          void carregarDados(true);
-        }}
-        onDeleted={() => {
           setDispositivoEmEdicao(null);
           void carregarDados(true);
         }}
@@ -484,6 +522,15 @@ export default function ManageDevicesScreen() {
         onSaved={() => {
           void carregarDados(true);
         }}
+      />
+
+      <ConfirmModal
+        visible={remocao !== null}
+        title={remocao ? configRemocao.title : ""}
+        message={remocao ? configRemocao.message : ""}
+        confirmLabel="Remover"
+        onConfirm={confirmarRemocao}
+        onCancel={() => setRemocao(null)}
       />
     </SafeAreaView>
   );
@@ -524,30 +571,6 @@ const styles = StyleSheet.create({
     color: DARK_BLUE,
     letterSpacing: -0.4,
   },
-  filterList: {
-    gap: 8,
-    paddingBottom: 20,
-  },
-  filterChip: {
-    borderWidth: 1,
-    borderColor: "#D7E8F8",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 9,
-    backgroundColor: "#FFFFFF",
-  },
-  filterChipSelected: {
-    borderColor: BLUE,
-    backgroundColor: "#EAF5FF",
-  },
-  filterText: {
-    fontSize: 13,
-    color: "#555555",
-  },
-  filterTextSelected: {
-    color: DARK_BLUE,
-    fontWeight: "700",
-  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -555,20 +578,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     marginTop: 3,
   },
+  addSectionHeader: {
+    marginTop: 30,
+  },
   sectionTitle: {
     fontSize: 19,
     fontWeight: "700",
     color: DARK_BLUE,
     letterSpacing: -0.3,
-  },
-  sectionCount: {
-    fontSize: 12,
-    color: BLUE,
-    backgroundColor: "#EAF5FF",
-    overflow: "hidden",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
   },
   cardList: {
     gap: 15,
@@ -631,72 +648,37 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#34C759",
   },
+  statusDotInativo: {
+    backgroundColor: "#BBBBBB",
+  },
   statusText: {
-    color: BLUE,
+    color: "#239B56",
     fontSize: 11,
   },
-  petCaption: {
-    color: "#888888",
-    fontSize: 11,
-    marginTop: 5,
+  statusTextInativo: {
+    color: "#999999",
   },
-  detailsButton: {
-    padding: 5,
-    marginLeft: 2,
-  },
-  addSectionHeader: {
-    marginTop: 30,
-    marginBottom: 15,
-  },
-  addSectionText: {
-    gap: 5,
-  },
-  addSectionSubtitle: {
-    color: "#888888",
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 2,
-  },
-  primaryAddButton: {
-    minHeight: 82,
-    width: "100%",
+  bateriaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 13,
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#D7E8F8",
-    backgroundColor: "#F8FBFF",
-  },
-  primaryAddIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
-    backgroundColor: "#EAF3FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryAddInfo: {
-    flex: 1,
     gap: 4,
   },
-  primaryAddTitle: {
-    color: DARK_BLUE,
-    fontSize: 15,
-    fontWeight: "700",
+  removeButton: {
+    minHeight: 30,
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    marginTop: 10,
+    paddingHorizontal: 13,
+    borderRadius: 9,
+    backgroundColor: "#E53935",
   },
-  primaryAddSubtitle: {
-    color: "#777777",
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  catalogTitle: {
-    fontSize: 17,
+  removeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 11,
     fontWeight: "700",
-    color: DARK_BLUE,
-    marginTop: 27,
-    marginBottom: 14,
   },
   addCard: {
     width: "100%",
@@ -753,9 +735,6 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: "#008FDB",
   },
-  addButtonDisabled: {
-    backgroundColor: "#C8D3DC",
-  },
   addButtonText: {
     color: "#FFFFFF",
     fontSize: 11,
@@ -800,34 +779,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: "center",
     marginTop: 7,
-  },
-  noProductsCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E7EDF2",
-    padding: 17,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 14,
-  },
-  noProductsText: {
-    flex: 1,
-    color: "#777777",
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  refreshButton: {
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    padding: 14,
-    marginTop: 10,
-  },
-  refreshButtonText: {
-    color: BLUE,
-    fontSize: 13,
-    fontWeight: "600",
   },
 });

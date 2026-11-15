@@ -1,9 +1,11 @@
-import { CameraSalva, esquecerCamera } from "@/lib/camera/cameraSalva";
+"use no memo";
+
+import { CameraSalva } from "@/lib/camera/cameraSalva";
 import { caminhoParaGravar, OPCOES_RTSP } from "@/lib/camera/gravacoes";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { VLCPlayer } from "react-native-vlc-media-player";
 
 const AZUL = "#2E98FE";
@@ -28,12 +30,18 @@ export function CameraAoVivo({ dados, onTrocar }: Props) {
   useFocusEffect(
     useCallback(() => {
       setFocada(true);
-      return () => setFocada(false);
+      return () => {
+        setFocada(false);
+        setTocando(false);
+      };
     }, []),
   );
 
   const [tocando, setTocando] = useState(false);
   const [erroVideo, setErroVideo] = useState("");
+  // Com erro, o player é desmontado: um player com falha, ainda montado, derruba
+  // o app no Android quando ele vai para segundo plano (pause em player liberado).
+  const [falhou, setFalhou] = useState(false);
   const [mudo, setMudo] = useState(true);
   const [gravando, setGravando] = useState(false);
   const [caminhoGravacao, setCaminhoGravacao] = useState("");
@@ -73,25 +81,6 @@ export function CameraAoVivo({ dados, onTrocar }: Props) {
     }
   }
 
-  function trocarCamera() {
-    Alert.alert(
-      "Trocar câmera",
-      "A câmera salva será esquecida e você poderá conectar outra.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Trocar",
-          style: "destructive",
-          onPress: async () => {
-            setGravando(false);
-            await esquecerCamera();
-            onTrocar();
-          },
-        },
-      ],
-    );
-  }
-
   // "recordingPath" liga e desliga a gravação (vazio = parada).
   // Essa propriedade vem do conserto nativo em plugins/withVlcGradleFix.js.
   const propsGravacao: any = { recordingPath: gravando ? caminhoGravacao : "" };
@@ -103,28 +92,32 @@ export function CameraAoVivo({ dados, onTrocar }: Props) {
       </Text>
 
       <View style={styles.videoContainer}>
-        <VLCPlayer
-          style={styles.video}
-          source={{ uri: dados.url, initOptions: OPCOES_RTSP }}
-          autoplay
-          paused={!focada}
-          muted={mudo}
-          resizeMode="contain"
-          {...propsGravacao}
-          onPlaying={() => {
-            setErroVideo("");
-            setTocando(true);
-          }}
-          onRecordingCreated={() =>
-            setAviso("Gravação salva! Veja em Gravações.")
-          }
-          onError={() => {
-            setTocando(false);
-            setErroVideo(
-              "Não foi possível abrir o vídeo. Confira se o celular está no mesmo Wi-Fi da câmera. Se o IP dela mudou, toque em Trocar câmera.",
-            );
-          }}
-        />
+        {/* Só existe com a aba em foco e sem erro (evita player órfão). */}
+        {focada && !falhou ? (
+          <VLCPlayer
+            style={styles.video}
+            source={{ uri: dados.url, initOptions: OPCOES_RTSP }}
+            autoplay
+            muted={mudo}
+            resizeMode="contain"
+            {...propsGravacao}
+            onPlaying={() => {
+              setErroVideo("");
+              setTocando(true);
+            }}
+            onRecordingCreated={() =>
+              setAviso("Gravação salva! Veja em Gravações.")
+            }
+            onError={() => {
+              setTocando(false);
+              setGravando(false);
+              setFalhou(true);
+              setErroVideo(
+                "Não foi possível abrir o vídeo. Confira se o celular está no mesmo Wi-Fi da câmera. Se o IP dela mudou, troque a câmera em Perfil > Gerenciar dispositivos.",
+              );
+            }}
+          />
+        ) : null}
 
         {tocando ? (
           <View style={styles.selo}>
@@ -141,6 +134,18 @@ export function CameraAoVivo({ dados, onTrocar }: Props) {
         ) : null}
 
         {erroVideo ? <Text style={styles.erro}>{erroVideo}</Text> : null}
+
+        {falhou ? (
+          <TouchableOpacity
+            style={styles.tentarDeNovo}
+            onPress={() => {
+              setErroVideo("");
+              setFalhou(false);
+            }}
+          >
+            <Text style={styles.tentarDeNovoTexto}>Tentar de novo</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View style={styles.controles}>
@@ -198,10 +203,6 @@ export function CameraAoVivo({ dados, onTrocar }: Props) {
         }
       >
         <Text style={styles.botaoTexto}>Expandir vídeo</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={trocarCamera} hitSlop={10}>
-        <Text style={styles.trocar}>Trocar câmera</Text>
       </TouchableOpacity>
     </View>
   );
@@ -261,6 +262,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Nunito-Regular",
     textAlign: "center",
+  },
+  tentarDeNovo: {
+    position: "absolute",
+    top: 12,
+    alignSelf: "center",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  tentarDeNovoTexto: {
+    fontSize: 12,
+    fontFamily: "Nunito-Bold",
+    color: AZUL_ESCURO,
   },
   controles: {
     flexDirection: "row",

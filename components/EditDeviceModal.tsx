@@ -1,5 +1,4 @@
 import {
-  deleteCollarDevice,
   updateCollarDevice,
   type CollarDevice,
 } from "@/lib/actions/collar-actions";
@@ -33,7 +32,6 @@ type Props = {
   pets: Pet[];
   onClose: () => void;
   onSaved: () => void;
-  onDeleted: () => void;
   onManageSafeAreas: (pet: Pet) => void;
 };
 
@@ -45,7 +43,6 @@ export function ManageDeviceModal({
   pets,
   onClose,
   onSaved,
-  onDeleted,
   onManageSafeAreas,
 }: Props) {
   const [nome, setNome] = useState("");
@@ -120,57 +117,6 @@ export function ManageDeviceModal({
     }
 
     onManageSafeAreas(petVinculado);
-  };
-
-  const confirmarRemocao = () => {
-    if (!device) return;
-
-    Alert.alert(
-      "Remover dispositivo?",
-      "A coleira será desvinculada da sua conta. O produto e seu histórico de ativação não serão apagados.",
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: "Remover",
-          style: "destructive",
-          onPress: remover,
-        },
-      ],
-    );
-  };
-
-  const remover = async () => {
-    if (!device) return;
-
-    setSalvando(true);
-
-    try {
-      const resultado = await deleteCollarDevice(device.id_dispositivo);
-
-      if (!resultado.sucess) {
-        Alert.alert("Erro ao remover", resultado.error);
-        return;
-      }
-
-      Alert.alert("Dispositivo removido", "O vínculo foi removido.", [
-        {
-          text: "OK",
-          onPress: onDeleted,
-        },
-      ]);
-    } catch (error) {
-      Alert.alert(
-        "Erro ao remover",
-        error instanceof Error
-          ? error.message
-          : "Não foi possível remover o dispositivo.",
-      );
-    } finally {
-      setSalvando(false);
-    }
   };
 
   if (!device) return null;
@@ -284,8 +230,8 @@ export function ManageDeviceModal({
               />
 
               <Text style={styles.infoText}>
-                O ID do produto é {device.id_produto}. Editar ou remover o
-                vínculo não altera o status de ativação do produto.
+                O ID do produto é {device.id_produto}. Editar o vínculo não
+                altera o status de ativação do produto.
               </Text>
             </View>
 
@@ -326,16 +272,6 @@ export function ManageDeviceModal({
               ) : (
                 <Text style={styles.saveButtonText}>Salvar alterações</Text>
               )}
-            </Pressable>
-
-            <Pressable
-              style={[styles.deleteButton, salvando && styles.disabledButton]}
-              onPress={confirmarRemocao}
-              disabled={salvando}
-            >
-              <Ionicons name="trash-outline" size={18} color="#D93025" />
-
-              <Text style={styles.deleteButtonText}>Remover dispositivo</Text>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -518,22 +454,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
-  },
-  deleteButton: {
-    minHeight: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#F0C9C6",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 12,
-  },
-  deleteButtonText: {
-    color: "#D93025",
-    fontSize: 15,
     fontWeight: "600",
   },
   disabledButton: {

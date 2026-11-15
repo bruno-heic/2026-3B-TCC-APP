@@ -1,3 +1,5 @@
+"use no memo";
+
 import { CameraHeader } from "@/components/camera/CameraHeader";
 import { salvarCamera } from "@/lib/camera/cameraSalva";
 import { OPCOES_RTSP } from "@/lib/camera/gravacoes";

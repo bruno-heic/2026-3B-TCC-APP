@@ -1,3 +1,5 @@
+"use no memo";
+
 import { CameraHeader } from "@/components/camera/CameraHeader";
 import { pastaGravacoes } from "@/lib/camera/gravacoes";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
