@@ -58,7 +58,9 @@ export default function ConectarScreen() {
     return (
       <View style={styles.container}>
         <CameraHeader titulo="Conectar câmera" />
-        <Text style={styles.vazio}>Marca não encontrada. Volte e escolha de novo.</Text>
+        <Text style={styles.vazio}>
+          Marca não encontrada. Volte e escolha de novo.
+        </Text>
       </View>
     );
   }
@@ -135,7 +137,11 @@ export default function ConectarScreen() {
             ))}
 
             <View style={styles.dica}>
-              <Ionicons name="information-circle-outline" size={20} color="#8A6D00" />
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color="#222222"
+              />
               <Text style={styles.dicaTexto}>{marca.dica}</Text>
             </View>
 
@@ -185,7 +191,10 @@ export default function ConectarScreen() {
                 autoCorrect={false}
                 editable={!testando}
               />
-              <TouchableOpacity onPress={() => setVerSenha((v) => !v)} hitSlop={10}>
+              <TouchableOpacity
+                onPress={() => setVerSenha((v) => !v)}
+                hitSlop={10}
+              >
                 <Ionicons
                   name={verSenha ? "eye-off-outline" : "eye-outline"}
                   size={22}
@@ -195,7 +204,11 @@ export default function ConectarScreen() {
             </View>
 
             <View style={styles.dica}>
-              <Ionicons name="information-circle-outline" size={20} color="#8A6D00" />
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color="#8A6D00"
+              />
               <Text style={styles.dicaTexto}>{marca.atencao}</Text>
             </View>
 
@@ -291,53 +304,54 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   dica: {
+    marginTop: 50,
+    minHeight: 104,
+    borderRadius: 22,
+    backgroundColor: "#DDEEFF",
+
     flexDirection: "row",
-    gap: 8,
-    backgroundColor: "#FFF6D6",
-    borderRadius: 14,
-    padding: 12,
-    marginVertical: 14,
+    alignItems: "center",
+
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   dicaTexto: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Nunito-Regular",
-    color: "#5C4A00",
-    lineHeight: 17,
+    color: "#858585",
+    fontSize: 13,
+    lineHeight: 16,
   },
   rotulo: {
     fontSize: 13,
     fontFamily: "Nunito-SemiBold",
     color: AZUL_ESCURO,
     marginBottom: 6,
-    marginTop: 6,
+    marginTop: 16,
   },
   campo: {
-    borderWidth: 1,
-    borderColor: "#D5E3EC",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 15,
-    fontFamily: "Nunito-Regular",
-    color: "#111",
-    backgroundColor: "#F8FBFD",
-  },
-  campoSenha: {
+    height: 45,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D5E3EC",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    backgroundColor: "#F8FBFD",
+    borderBottomWidth: 2,
+    borderBottomColor: "#FFD700",
+    marginTop: 4,
+  },
+  campoSenha: {
+    height: 45,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 2,
+    backgroundColor: "#fff",
+    borderBottomColor: "#FFD700",
+    marginTop: 14,
   },
   campoSenhaInput: {
     flex: 1,
-    paddingVertical: 11,
-    fontSize: 15,
+    height: 45,
+    fontSize: 16,
     fontFamily: "Nunito-Regular",
-    color: "#111",
+    color: "#000",
+    paddingHorizontal: 0,
+    paddingBottom: 8,
   },
   erro: {
     color: "#C62828",
