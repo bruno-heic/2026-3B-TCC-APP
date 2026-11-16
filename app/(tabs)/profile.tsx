@@ -59,7 +59,7 @@ export default function Perfil() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
-  const [plano, setPlano] = useState<PlanId>("basic");
+  const [plano, setPlano] = useState<PlanId>("superpet");
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [alertRuleModalVisible, setAlertRuleModalVisible] = useState(false);
   const [editingField, setEditingField] = useState<EditableField | null>(null);
@@ -500,7 +500,7 @@ export default function Perfil() {
             {
               icon: "ribbon-outline",
               label: "Plano",
-              value: PLAN_LABEL[plano],
+              value: `${PLAN_LABEL[plano]} (Demonstrativo)`,
               onPress: () => {
                 router.push({
                   pathname: "/(onboarding)/plans",
