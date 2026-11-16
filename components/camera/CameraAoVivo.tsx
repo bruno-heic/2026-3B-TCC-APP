@@ -1,7 +1,6 @@
 import { CameraSalva, esquecerCamera } from "@/lib/camera/cameraSalva";
 import { caminhoParaGravar, OPCOES_RTSP } from "@/lib/camera/gravacoes";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -24,8 +23,9 @@ function formatarTempo(total: number) {
 // Vídeo ao vivo + som, gravação e atalhos. Fica dentro do card "Câmera ao vivo".
 export function CameraAoVivo({ dados, onTrocar }: Props) {
   const router = useRouter();
-  const focada = useIsFocused();
 
+  // Começa true porque o componente já monta com a aba em foco.
+  const [focada, setFocada] = useState(true);
   const [tocando, setTocando] = useState(false);
   const [erroVideo, setErroVideo] = useState("");
   const [mudo, setMudo] = useState(true);
@@ -41,10 +41,12 @@ export function CameraAoVivo({ dados, onTrocar }: Props) {
     return () => clearInterval(id);
   }, [gravando]);
 
-  // Ao sair da aba, para a gravação (o vídeo também pausa, veja "paused").
+  // Marca a tela como em foco e, ao sair da aba, pausa o vídeo e para a gravação.
   useFocusEffect(
     useCallback(() => {
+      setFocada(true);
       return () => {
+        setFocada(false);
         setGravando(false);
         setCaminhoGravacao("");
       };
