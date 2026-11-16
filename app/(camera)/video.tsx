@@ -1,3 +1,5 @@
+"use no memo";
+
 import { CameraHeader } from "@/components/camera/CameraHeader";
 import { CameraSalva, carregarCamera } from "@/lib/camera/cameraSalva";
 import { OPCOES_RTSP } from "@/lib/camera/gravacoes";
@@ -11,6 +13,8 @@ export default function VideoScreen() {
   const [camera, setCamera] = useState<CameraSalva | null>(null);
   const [carregou, setCarregou] = useState(false);
   const [erro, setErro] = useState("");
+  // Com erro, o player é desmontado (evita crash ao ir para segundo plano).
+  const [falhou, setFalhou] = useState(false);
 
   useEffect(() => {
     carregarCamera().then((c) => {
@@ -26,7 +30,7 @@ export default function VideoScreen() {
       <View style={styles.videoBox}>
         {!carregou ? (
           <ActivityIndicator color="#FFFFFF" />
-        ) : camera ? (
+        ) : camera && !falhou ? (
           <VLCPlayer
             style={styles.video}
             source={{ uri: camera.url, initOptions: OPCOES_RTSP }}
@@ -34,13 +38,14 @@ export default function VideoScreen() {
             muted={mudo !== "0"}
             resizeMode="contain"
             onPlaying={() => setErro("")}
-            onError={() =>
+            onError={() => {
+              setFalhou(true);
               setErro(
                 "Não foi possível abrir o vídeo. Confira se o celular está no mesmo Wi-Fi da câmera.",
-              )
-            }
+              );
+            }}
           />
-        ) : (
+        ) : camera ? null : (
           <Text style={styles.msg}>Nenhuma câmera conectada.</Text>
         )}
 

@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type NoPetViewProps = {
@@ -16,7 +15,8 @@ export function NoPetView({ onAddPet }: NoPetViewProps) {
       <Text style={styles.title}>Você não tem um pet salvo</Text>
 
       <Text style={styles.subtitle}>
-        Adicione um pet para acompanhar consultas, vacinas e cuidados no app.
+        Adicione um pet para receber alertas do seu comportamento e segurança no
+        app.
       </Text>
 
       <TouchableOpacity style={styles.button} onPress={onAddPet}>

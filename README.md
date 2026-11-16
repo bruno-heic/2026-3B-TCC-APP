@@ -11,12 +11,12 @@ Um aplicativo de monitoramento inteligente para pets, que une uma coleira conect
 
 O Petify simplifica o cuidado com pets por meio de:
 
-* Coleira inteligente com sensores (Arduino/C++) conectada ao app
-* Cadastro e gerenciamento de múltiplos pets por usuário
-* Alertas configuráveis por regras, disparados a partir dos dados do dispositivo
-* Relatórios de saúde e atividade do pet
-* Autenticação e sincronização de dados via Supabase
-* Onboarding guiado — do cadastro do usuário ao primeiro pet
+- Coleira inteligente com sensores (Arduino/C++) conectada ao app
+- Cadastro e gerenciamento de múltiplos pets por usuário
+- Alertas configuráveis por regras, disparados a partir dos dados do dispositivo
+- Relatórios de saúde e atividade do pet
+- Autenticação e sincronização de dados via Supabase
+- Onboarding guiado — do cadastro do usuário ao primeiro pet
 
 A proposta é dar tranquilidade ao tutor, tornando visível o que antes só podia ser notado durante o contato direto com o animal.
 
@@ -44,8 +44,8 @@ A proposta é dar tranquilidade ao tutor, tornando visível o que antes só podi
 Clone o repositório e instale as dependências:
 
 ```bash
-git clone https://github.com/seu-usuario/petify-app.git
-cd petify-app
+git clone https://github.com/petifyy/2026-3B-TCC-APP.git
+cd 2026-3B-TCC-APP
 npm install
 ```
 

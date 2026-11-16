@@ -1,6 +1,7 @@
 import { ativarProduto } from "@/lib/actions/collar-actions";
 import { getUserPets } from "@/lib/actions/pet-actions";
 import { getUser } from "@/lib/actions/user-actions";
+import { ONBOARDING_ROUTE } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -191,7 +192,7 @@ export default function CollarAndPetSetup() {
 
         "Sua coleira foi configurada, vinculada ao seu pet e ativada com sucesso.",
 
-        [{ text: "Continuar", onPress: () => router.replace("/(tabs)/home") }],
+        [{ text: "Continuar", onPress: () => router.replace(ONBOARDING_ROUTE) }],
       );
     } catch (error) {
       const mensagem =
@@ -257,7 +258,7 @@ export default function CollarAndPetSetup() {
               Cadastre um pet antes de vincular sua coleira.
             </Text>
 
-            <Pressable onPress={() => router.push("/home")}>
+            <Pressable onPress={() => router.replace(ONBOARDING_ROUTE)}>
               <Text style={styles.linkText}>Voltar ao início</Text>
             </Pressable>
           </View>

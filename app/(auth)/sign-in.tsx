@@ -1,4 +1,5 @@
 import { handleLoginUser } from "@/lib/actions/user-actions";
+import { isOnboardingDone, ONBOARDING_ROUTE } from "@/lib/onboarding";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -42,7 +43,7 @@ export default function SignIn() {
       Alert.alert("Erro ao entrar", result.error);
       return;
     }
-    router.replace("/(tabs)/home");
+    router.replace((await isOnboardingDone()) ? "/(tabs)/home" : ONBOARDING_ROUTE);
   };
 
   return (

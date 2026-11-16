@@ -10,11 +10,14 @@ import { NoDeviceView } from "./NoDeviceView";
 type RequireDeviceGateProps = {
   children: React.ReactNode;
   onAddDevice: () => void;
+  // Conteúdo exibido abaixo da mensagem quando não há coleira (ex.: card da câmera).
+  extra?: React.ReactNode;
 };
 
 export function RequireDeviceGate({
   children,
   onAddDevice,
+  extra,
 }: RequireDeviceGateProps) {
   const { userId } = usePetsContext();
   const [loading, setLoading] = useState(true);
@@ -71,7 +74,7 @@ export function RequireDeviceGate({
   }
 
   if (hasDevices === false) {
-    return <NoDeviceView onAddDevice={onAddDevice} />;
+    return <NoDeviceView onAddDevice={onAddDevice} extra={extra} />;
   }
 
   return <>{children}</>;

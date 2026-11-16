@@ -1,6 +1,7 @@
 import { PetForm } from "@/components/AddPetForm";
 import { SucessCreatePet } from "@/components/SucessCreatePet";
 import { createPet } from "@/lib/actions/pet-actions";
+import { ONBOARDING_ROUTE } from "@/lib/onboarding";
 import { PetFormData } from "@/lib/types/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -44,7 +45,7 @@ export default function CadastroPet() {
 
   const handleDoLater = () => {
     setModalVisivel(false);
-    router.replace("/home");
+    router.replace(ONBOARDING_ROUTE);
   };
 
   return (
