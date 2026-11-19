@@ -556,6 +556,46 @@ export default function Perfil() {
             },
           ]}
         />
+
+        <View
+          style={{
+            alignItems: "center",
+            marginVertical: 24,
+            paddingHorizontal: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Nunito-SemiBold",
+              fontSize: 13,
+              color: "#6B7280",
+              marginBottom: 4,
+            }}
+          >
+            Desenvolvido por
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Nunito-Regular",
+              fontSize: 12,
+              color: "#16181D",
+              textAlign: "center",
+            }}
+          >
+            Agno Seles · Bruno Guerra · Gustavo Medeiros
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Nunito-Regular",
+              fontSize: 12,
+              color: "#16181D",
+              textAlign: "center",
+              marginTop: 2,
+            }}
+          >
+            Heloisa Marques · Laura Lisboa
+          </Text>
+        </View>
       </ScrollView>
 
       <EditPetFieldModal
