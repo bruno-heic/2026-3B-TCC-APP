@@ -27,8 +27,7 @@ const TEXTO = "#16181D";
 const VERDE = "#22A447";
 const VERMELHO = "#E5322D";
 
-// Preencher quando o valor do SuperPet for definido.
-const PRECO_SUPERPET = "R$XX";
+const PRECO_SUPERPET = "R$19,90";
 
 type Beneficio = { label: string; basic: boolean };
 
@@ -163,7 +162,10 @@ export default function Planos() {
     setSalvando(false);
 
     if (!ok) {
-      Alert.alert("Atenção", "Não foi possível salvar o plano. Tente novamente.");
+      Alert.alert(
+        "Atenção",
+        "Não foi possível salvar o plano. Tente novamente.",
+      );
       return false;
     }
     setPlanoAtivo(plano);
