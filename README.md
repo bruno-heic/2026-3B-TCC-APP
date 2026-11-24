@@ -64,6 +64,14 @@ npx expo start
 
 Escaneie o QR code com o Expo Go no seu dispositivo.
 
+## Integrantes
+
+Agno S.
+Bruno G.
+Gustavo M.
+Heloísa M.
+Laura L.
+
 ## Licença
 
 MIT

@@ -59,7 +59,7 @@ export default function Perfil() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
-  const [plano, setPlano] = useState<PlanId>("basic");
+  const [plano, setPlano] = useState<PlanId>("superpet");
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [alertRuleModalVisible, setAlertRuleModalVisible] = useState(false);
   const [editingField, setEditingField] = useState<EditableField | null>(null);
@@ -500,7 +500,7 @@ export default function Perfil() {
             {
               icon: "ribbon-outline",
               label: "Plano",
-              value: PLAN_LABEL[plano],
+              value: `${PLAN_LABEL[plano]} (Demonstrativo)`,
               onPress: () => {
                 router.push({
                   pathname: "/(onboarding)/plans",
@@ -556,6 +556,46 @@ export default function Perfil() {
             },
           ]}
         />
+
+        <View
+          style={{
+            alignItems: "center",
+            marginVertical: 24,
+            paddingHorizontal: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "Nunito-SemiBold",
+              fontSize: 13,
+              color: "#6B7280",
+              marginBottom: 4,
+            }}
+          >
+            Desenvolvido por
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Nunito-Regular",
+              fontSize: 12,
+              color: "#16181D",
+              textAlign: "center",
+            }}
+          >
+            Agno Seles · Bruno Guerra · Gustavo Medeiros
+          </Text>
+          <Text
+            style={{
+              fontFamily: "Nunito-Regular",
+              fontSize: 12,
+              color: "#16181D",
+              textAlign: "center",
+              marginTop: 2,
+            }}
+          >
+            Heloisa Marques · Laura Lisboa
+          </Text>
+        </View>
       </ScrollView>
 
       <EditPetFieldModal
