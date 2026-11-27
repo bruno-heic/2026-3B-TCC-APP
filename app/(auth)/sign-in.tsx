@@ -1,10 +1,12 @@
 import { handleLoginUser } from "@/lib/actions/user-actions";
+import { AUTOFILL_LOGIN } from "@/lib/dev-autofill";
 import { isOnboardingDone, ONBOARDING_ROUTE } from "@/lib/onboarding";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -26,6 +28,11 @@ export default function SignIn() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
+
+  const preencherDados = () => {
+    setEmail(AUTOFILL_LOGIN.email);
+    setPassword(AUTOFILL_LOGIN.password);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -53,6 +60,13 @@ export default function SignIn() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <SafeAreaView style={styles.container}>
+          <TouchableOpacity activeOpacity={0.8} onPress={preencherDados}>
+            <Image
+              source={require("@/assets/images/logoBr.png")}
+              style={styles.logo}
+            />
+          </TouchableOpacity>
+
           <Text style={styles.title}>Login</Text>
 
           <View style={styles.form}>
@@ -124,6 +138,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 25,
     backgroundColor: "#fff",
+  },
+
+  logo: {
+    width: 100,
+    height: 100,
+    marginTop: 30,
+    resizeMode: "contain",
+    alignSelf: "center",
   },
 
   title: {

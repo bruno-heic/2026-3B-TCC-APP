@@ -1,12 +1,14 @@
 import { AddCollarModal } from "@/components/AddCollarForm";
 import { SucessSignUserModal } from "@/components/sucessSignUser";
 import { handleSignUser } from "@/lib/actions/user-actions";
+import { AUTOFILL_TUTOR } from "@/lib/dev-autofill";
 import { ONBOARDING_ROUTE } from "@/lib/onboarding";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -37,6 +39,14 @@ export default function SignUp() {
 
   const regexSenha = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
   const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const preencherDados = () => {
+    setNome(AUTOFILL_TUTOR.nome);
+    setEmail(AUTOFILL_TUTOR.email);
+    setConfirmarEmail(AUTOFILL_TUTOR.email);
+    setPassword(AUTOFILL_TUTOR.password);
+    setConfirmarSenha(AUTOFILL_TUTOR.password);
+  };
 
   const SignUpUser = async () => {
     if (!nome || !email || !confirmarEmail || !password || !confirmarSenha) {
@@ -117,6 +127,13 @@ export default function SignUp() {
               contentContainerStyle={{ flexGrow: 1 }}
               keyboardShouldPersistTaps="handled"
             >
+              <TouchableOpacity activeOpacity={0.8} onPress={preencherDados}>
+                <Image
+                  source={require("@/assets/images/logoBr.png")}
+                  style={styles.logo}
+                />
+              </TouchableOpacity>
+
               <Text style={styles.title}>Cadastro do usuário</Text>
 
               <View style={styles.progressContainer}>
